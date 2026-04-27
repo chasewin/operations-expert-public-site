@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>关系图谱</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="app-sidebar">
+        <div class="sidebar-topbar">
+          <div class="sidebar-brand">
+            <div class="brand-mark">OE</div>
+            <div class="brand-copy">
+              <p class="eyebrow sidebar-eyebrow">Operations Expert</p>
+              <h1>智能活动系统</h1>
+            </div>
+          </div>
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="切换侧边栏">⇤</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <a class="sidebar-nav-item" href="./index.html" title="主页">
+            <span class="nav-label-full">主页</span>
+            <span class="nav-label-short">主</span>
+          </a>
+          <a class="sidebar-nav-item" href="./system.html" title="系统说明">
+            <span class="nav-label-full">系统说明</span>
+            <span class="nav-label-short">系</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./protocol.html" title="工作协议台">
+            <span class="nav-label-full">工作协议台</span>
+            <span class="nav-label-short">协</span>
+          </a>
+          <a class="sidebar-nav-item active" href="./warehouse.html?category=activity" title="数据仓库">
+            <span class="nav-label-full">数据仓库</span>
+            <span class="nav-label-short">库</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem active" href="./graph.html" title="关系图谱">
+            <span class="nav-label-full">关系图谱</span>
+            <span class="nav-label-short">图</span>
+          </a>
+          <a class="sidebar-nav-item" href="./growth.html" title="AI成长记录">
+            <span class="nav-label-full">AI成长记录</span>
+            <span class="nav-label-short">长</span>
+          </a>
+          <a class="sidebar-nav-item" href="./capabilities.html" title="专家能力 Wiki">
+            <span class="nav-label-full">专家能力 Wiki</span>
+            <span class="nav-label-short">能</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="app-main">
+        <div class="shell graph-shell">
+          <div class="page-titlebar graph-pagebar">
+            <div class="graph-pagebar-copy">
+              <a
+                id="graph-source-back"
+                class="back-link top-back-link graph-source-back"
+                href="./warehouse.html"
+                aria-label="返回上一页"
+                title="返回上一页"
+              >
+                <span aria-hidden="true">←</span>
+              </a>
+              <div class="graph-pagebar-titles">
+                <p class="eyebrow">Knowledge Graph</p>
+                <h1>关系图谱</h1>
+              </div>
+            </div>
+          </div>
+
+          <section class="graph-workspace graph-drawer-open" id="graph-workspace">
+            <div class="graph-canvas-panel">
+              <div class="graph-viewport" id="graph-viewport">
+                <svg id="graph-svg" class="graph-svg" viewBox="0 0 1000 720" aria-label="卡片关系图">
+                  <defs>
+                    <filter id="graphNodeShadow" x="-40%" y="-40%" width="180%" height="180%">
+                      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="rgba(15, 32, 28, 0.18)" />
+                    </filter>
+                  </defs>
+                  <rect class="graph-hit-area" x="-5000" y="-5000" width="10000" height="10000"></rect>
+                  <g id="graph-scene">
+                    <g id="graph-links"></g>
+                    <g id="graph-nodes"></g>
+                  </g>
+                </svg>
+                <div id="graph-empty" class="graph-empty" hidden>
+                  当前筛选下没有可展示的节点。
+                </div>
+                <div id="graph-note" class="graph-note" hidden>
+                  当前还有节点，但它们之间暂时没有关系线。
+                </div>
+                <button
+                  id="graph-drawer-toggle"
+                  class="graph-viewport-control"
+                  type="button"
+                  aria-expanded="true"
+                  aria-label="切换筛选面板"
+                  title="筛选面板"
+                >
+                  <span aria-hidden="true">☷</span>
+                </button>
+
+                <aside class="graph-drawer" id="graph-drawer">
+                  <div class="graph-drawer-scroll">
+                    <div class="graph-side-header">
+                      <div>
+                        <p class="eyebrow">Filter</p>
+                        <h3>关系筛选</h3>
+                      </div>
+                    </div>
+
+                    <div class="graph-filter-block">
+                      <div class="panel-label">卡片类型</div>
+                      <div id="graph-category-filters" class="filter-list horizontal graph-chip-list"></div>
+                    </div>
+
+                    <div class="graph-filter-block">
+                      <div class="panel-label">站点</div>
+                      <div id="graph-site-filters" class="filter-list horizontal graph-chip-list"></div>
+                    </div>
+
+                    <div class="graph-filter-block graph-density-block">
+                      <div class="graph-density-head">
+                        <div class="panel-label">节点疏密</div>
+                        <div id="graph-density-value" class="muted tiny">自动</div>
+                      </div>
+                      <input
+                        id="graph-density-range"
+                        class="graph-density-range"
+                        type="range"
+                        min="85"
+                        max="170"
+                        step="5"
+                        value="100"
+                        aria-label="调整图谱节点疏密"
+                      />
+                    </div>
+
+                    <div class="graph-filter-actions">
+                      <button id="graph-reset-filters" class="ghost-link graph-mini-action" type="button">恢复默认</button>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="./cards-data.js"></script>
+    <script>
+      const appShell = document.getElementById("app-shell");
+      const sidebarToggle = document.getElementById("sidebar-toggle");
+      const collapsed = localStorage.getItem("lite-sidebar-collapsed") === "true";
+
+      function applySidebarState(value) {
+        appShell.classList.toggle("sidebar-collapsed", value);
+        sidebarToggle.textContent = value ? "⇥" : "⇤";
+      }
+
+      applySidebarState(collapsed);
+      sidebarToggle.addEventListener("click", () => {
+        const next = !appShell.classList.contains("sidebar-collapsed");
+        localStorage.setItem("lite-sidebar-collapsed", String(next));
+        applySidebarState(next);
+      });
+
+      const params = new URLSearchParams(window.location.search);
+      const initialCategory = params.get("category");
+      const initialSite = params.get("site");
+      const focusNodeId = params.get("focus");
+      const returnTo = params.get("returnTo");
+      const categories = window.CARD_DATA.categories || [];
+      const cards = window.CARD_DATA.cards || [];
+      const sites = (window.CARD_DATA.sites || []).filter((site) => site.id !== "all");
+      const focusCard = focusNodeId ? cards.find((card) => card.id === focusNodeId) : null;
+
+      const categoryColorMap = {
+        activity: "#1d8f7f",
+        problem: "#a3572b",
+        method: "#5b6cbf",
+        site: "#7a5da8",
+        "site-hub": "#40474f",
+      };
+
+      const categoryAnchorMap = {
+        activity: { x: -250, y: -170 },
+        problem: { x: -170, y: 180 },
+        method: { x: 170, y: 190 },
+        site: { x: 260, y: -120 },
+        "site-hub": { x: 0, y: 0 },
+      };
+
+      const siteAnchorMap = {
+        playtime: { x: -180, y: -10 },
+        j887cn: { x: 0, y: 150 },
+        "cf-online": { x: 170, y: -120 },
+      };
+
+      const workspace = document.getElementById("graph-workspace");
+      const drawerToggle = document.getElementById("graph-drawer-toggle");
+      const graphSourceBack = document.getElementById("graph-source-back");
+      const drawer = document.getElementById("graph-drawer");
+      const densityRange = document.getElementById("graph-density-range");
+      const densityValue = document.getElementById("graph-density-value");
+      const svg = document.getElementById("graph-svg");
+      const scene = document.getElementById("graph-scene");
+      const linksLayer = document.getElementById("graph-links");
+      const nodesLayer = document.getElementById("graph-nodes");
+      const viewport = document.getElementById("graph-viewport");
+      const emptyState = document.getElementById("graph-empty");
+      const graphNote = document.getElementById("graph-note");
+      const fallbackBackHref = `./warehouse.html?category=${encodeURIComponent(initialCategory || "activity")}&site=${encodeURIComponent(initialSite || "all")}`;
+      const resolvedBackHref = returnTo || fallbackBackHref;
+      graphSourceBack.href = resolvedBackHref;
+
+      const defaultCategoryIds = categories.map((item) => item.id);
+      const defaultSiteIds =
+        initialSite === "none"
+          ? []
+          : initialSite && initialSite !== "all" && initialSite !== "multi"
+            ? [initialSite]
+            : sites.map((item) => item.id);
+
+      if (focusCard) {
+        const focusSiteIds = normalizeSiteIds(focusCard);
+        if (focusSiteIds.length) {
+          defaultSiteIds.splice(0, defaultSiteIds.length, ...focusSiteIds);
+        }
+      }
+
+      const state = {
+        categories: new Set(defaultCategoryIds),
+        sites: new Set(defaultSiteIds),
+        selectedNodeId: focusCard?.id || null,
+        hoveredNodeId: null,
+        pinnedNodeId: null,
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        drawerOpen: true,
+        focusNodeId: focusCard?.id || null,
+        focusLockTicks: 0,
+        initialFocusPending: Boolean(focusCard),
+        spacingFactor: 1,
+        spacingTouched: false,
+      };
+
+      const nodesById = new Map();
+      const simulationNodes = [];
+      const simulationLinks = [];
+      let rafId = null;
+      let viewAnimationId = null;
+      let hoverClearTimer = null;
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function normalizeSiteIds(card) {
+        const ids = new Set();
+        if (card.site && card.site !== "all") ids.add(card.site);
+        if (Array.isArray(card.sites)) {
+          card.sites.forEach((siteId) => {
+            if (siteId && siteId !== "all") ids.add(siteId);
+          });
+        }
+        return [...ids];
+      }
+
+      function getCategoryLabel(categoryId) {
+        if (categoryId === "site-hub") return "站点节点";
+        return categories.find((item) => item.id === categoryId)?.label || categoryId;
+      }
+
+      function getSiteLabel(siteId) {
+        return sites.find((item) => item.id === siteId)?.label || siteId;
+      }
+
+      function intersectCount(listA, listB) {
+        const set = new Set(listA);
+        return listB.filter((item) => set.has(item)).length;
+      }
+
+      function getPairBonus(left, right) {
+        const pair = [left, right].sort().join(":");
+        if (pair === "activity:problem") return 4;
+        if (pair === "problem:method") return 4;
+        if (pair === "activity:method") return 2;
+        if (pair === "activity:site") return 2;
+        if (pair === "problem:site") return 2;
+        if (pair === "method:site") return 2;
+        return 0;
+      }
+
+      const baseCards = cards.map((card, index) => {
+        const siteIds = normalizeSiteIds(card);
+        const categoryAnchor = categoryAnchorMap[card.category] || { x: 0, y: 0 };
+        const siteAnchor = siteIds.length ? (siteAnchorMap[siteIds[0]] || { x: 0, y: 0 }) : { x: 0, y: 0 };
+        const angle = (index / Math.max(cards.length, 1)) * Math.PI * 2;
+        const radius = 38 + (index % 5) * 20;
+        const node = {
+          ...card,
+          nodeType: "card",
+          siteIds,
+          degree: 0,
+          x: categoryAnchor.x + siteAnchor.x + Math.cos(angle) * radius,
+          y: categoryAnchor.y + siteAnchor.y + Math.sin(angle) * radius,
+          vx: 0,
+          vy: 0,
+          radius: card.category === "site" ? 4.4 : 3.2,
+        };
+        nodesById.set(node.id, node);
+        return node;
+      });
+
+      const siteHubNodes = sites.map((site, index) => {
+        const anchor = siteAnchorMap[site.id] || { x: 0, y: 0 };
+        const node = {
+          id: `site-hub-${site.id}`,
+          nodeType: "hub",
+          category: "site-hub",
+          siteIds: [site.id],
+          siteId: site.id,
+          title: site.label,
+          subtitle: "站点枢纽节点",
+          summary: "用来把这个站点下的活动、问题、方法和站点文档串起来。",
+          tags: [],
+          degree: 0,
+          x: anchor.x + Math.cos(index) * 10,
+          y: anchor.y + Math.sin(index) * 10,
+          vx: 0,
+          vy: 0,
+          radius: 5.1,
+        };
+        nodesById.set(node.id, node);
+        return node;
+      });
+
+      const baseCardEdges = [];
+      const degreeCounter = new Map(baseCards.map((node) => [node.id, 0]));
+
+      for (let i = 0; i < baseCards.length; i += 1) {
+        for (let j = i + 1; j < baseCards.length; j += 1) {
+          const source = baseCards[i];
+          const target = baseCards[j];
+          const sharedTagCount = intersectCount(source.tags || [], target.tags || []);
+          const sharedSiteCount = intersectCount(source.siteIds, target.siteIds);
+          const pairBonus = getPairBonus(source.category, target.category);
+          const score = sharedTagCount * 2 + sharedSiteCount * 2 + pairBonus;
+
+          if (score < 4) continue;
+          baseCardEdges.push({
+            id: `edge-${source.id}-${target.id}`,
+            source: source.id,
+            target: target.id,
+            score,
+          });
+        }
+      }
+
+      const acceptedCardEdges = [];
+      baseCardEdges
+        .sort((left, right) => right.score - left.score)
+        .forEach((edge) => {
+          const leftDegree = degreeCounter.get(edge.source) || 0;
+          const rightDegree = degreeCounter.get(edge.target) || 0;
+          if (leftDegree >= 5 || rightDegree >= 5) return;
+          degreeCounter.set(edge.source, leftDegree + 1);
+          degreeCounter.set(edge.target, rightDegree + 1);
+          acceptedCardEdges.push(edge);
+        });
+
+      acceptedCardEdges.forEach((edge) => {
+        const source = nodesById.get(edge.source);
+        const target = nodesById.get(edge.target);
+        if (!source || !target) return;
+        source.degree += 1;
+        target.degree += 1;
+        source.radius = Math.min(6.4, 3.2 + source.degree * 0.3 + (source.category === "site" ? 0.45 : 0));
+        target.radius = Math.min(6.4, 3.2 + target.degree * 0.3 + (target.category === "site" ? 0.45 : 0));
+      });
+
+      function toggleDrawer(value) {
+        state.drawerOpen = value;
+        workspace.classList.toggle("graph-drawer-open", value);
+        drawerToggle.setAttribute("aria-expanded", value ? "true" : "false");
+        drawerToggle.setAttribute("aria-label", value ? "关闭筛选面板" : "打开筛选面板");
+        drawerToggle.setAttribute("title", value ? "关闭筛选面板" : "打开筛选面板");
+        drawerToggle.innerHTML = `<span aria-hidden="true">${value ? "×" : "☷"}</span>`;
+      }
+
+      toggleDrawer(true);
+      drawerToggle.addEventListener("click", () => toggleDrawer(!state.drawerOpen));
+
+      function cardMatchesSite(card) {
+        if (!state.sites.size) return false;
+        if (state.sites.size === sites.length) return true;
+        const siteIds = normalizeSiteIds(card);
+        if (!siteIds.length) return true;
+        return siteIds.some((siteId) => state.sites.has(siteId));
+      }
+
+      function getVisibleCards() {
+        return baseCards.filter((node) => {
+          if (!state.categories.has(node.category)) return false;
+          if (!cardMatchesSite(node)) return false;
+          return true;
+        });
+      }
+
+      function getVisibleHubs(visibleCards) {
+        const siteIds = new Set(visibleCards.flatMap((node) => node.siteIds));
+        return siteHubNodes.filter((node) => siteIds.has(node.siteId));
+      }
+
+      function getVisibleLinks(visibleCards, visibleHubs) {
+        const cardIdSet = new Set(visibleCards.map((node) => node.id));
+        const visibleLinks = acceptedCardEdges.filter((edge) => cardIdSet.has(edge.source) && cardIdSet.has(edge.target));
+
+        visibleHubs.forEach((hub) => {
+          visibleCards
+            .filter((node) => node.siteIds.includes(hub.siteId))
+            .forEach((node) => {
+              visibleLinks.push({
+                id: `hub-${hub.id}-${node.id}`,
+                source: hub.id,
+                target: node.id,
+                score: 5,
+                kind: "hub",
+              });
+            });
+        });
+
+        return visibleLinks;
+      }
+
+      function getAutoSpacingFactor(nodeCount) {
+        if (nodeCount >= 70) return 1.6;
+        if (nodeCount >= 55) return 1.45;
+        if (nodeCount >= 40) return 1.3;
+        if (nodeCount >= 28) return 1.18;
+        return 1;
+      }
+
+      function syncDensityControl() {
+        const percent = Math.round((state.spacingFactor || 1) * 100);
+        densityRange.value = String(percent);
+        densityValue.textContent = state.spacingTouched ? `${percent}%` : `自动 · ${percent}%`;
+      }
+
+      function getNodeHref(node) {
+        if (!node) return "./warehouse.html";
+        if (node.nodeType === "hub") {
+          return `./warehouse.html?category=activity&site=${encodeURIComponent(node.siteId)}`;
+        }
+        return `./detail.html?category=${encodeURIComponent(node.category)}&site=${encodeURIComponent(
+          node.site !== "all" ? node.site : node.siteIds[0] || "all"
+        )}&id=${encodeURIComponent(node.id)}`;
+      }
+
+      function renderFilterButtons(container, items, isActive, onClick, formatter, options = {}) {
+        items.forEach((item) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          const itemId = item.id || item;
+          button.dataset.filterId = itemId;
+          button.className = "filter-btn graph-filter-chip" + (isActive(item) ? " active" : "");
+          if (options.dotColorMap?.[itemId]) {
+            button.style.setProperty("--filter-dot", options.dotColorMap[itemId]);
+            button.classList.add("has-dot");
+          }
+          button.textContent = formatter ? formatter(item) : item.label;
+          if (typeof onClick === "function") {
+            button.addEventListener("click", () => onClick(item));
+          } else {
+            button.disabled = true;
+            button.classList.add("is-legend-only");
+          }
+          container.appendChild(button);
+        });
+      }
+
+      function renderFilters() {
+        const categoryContainer = document.getElementById("graph-category-filters");
+        const siteContainer = document.getElementById("graph-site-filters");
+        categoryContainer.innerHTML = "";
+        siteContainer.innerHTML = "";
+
+        renderFilterButtons(
+          categoryContainer,
+          categories,
+          (item) => state.categories.has(item.id),
+          (item) => {
+            cancelAutoFocus();
+            if (state.categories.has(item.id) && state.categories.size > 1) {
+              state.categories.delete(item.id);
+            } else {
+              state.categories.add(item.id);
+            }
+            updateGraph();
+          },
+          null,
+          { dotColorMap: categoryColorMap }
+        );
+
+        renderFilterButtons(
+          categoryContainer,
+          [{ id: "site-hub", label: "站点节点" }],
+          () => false,
+          null,
+          null,
+          { dotColorMap: categoryColorMap }
+        );
+
+        renderFilterButtons(
+          siteContainer,
+          [{ id: "all", label: "全部" }, ...sites],
+          (item) => (item.id === "all" ? state.sites.size === sites.length : state.sites.has(item.id)),
+          (item) => {
+            cancelAutoFocus();
+            if (item.id === "all") {
+              state.sites =
+                state.sites.size === sites.length ? new Set() : new Set(sites.map((site) => site.id));
+              updateGraph();
+              return;
+            }
+            if (state.sites.has(item.id)) {
+              state.sites.delete(item.id);
+            } else {
+              state.sites.add(item.id);
+            }
+            updateGraph();
+          }
+        );
+
+      }
+
+      function ensureSelectedNodeStillVisible(visibleNodes) {
+        if (!state.selectedNodeId) return;
+        const stillVisible = visibleNodes.some((node) => node.id === state.selectedNodeId);
+        if (!stillVisible) state.selectedNodeId = null;
+      }
+
+      function cancelAutoFocus() {
+        state.initialFocusPending = false;
+        state.focusLockTicks = 0;
+        state.focusNodeId = null;
+      }
+
+      function stopViewAnimation() {
+        if (viewAnimationId) {
+          cancelAnimationFrame(viewAnimationId);
+          viewAnimationId = null;
+        }
+      }
+
+      function setTransform() {
+        scene.setAttribute("transform", `translate(${state.offsetX} ${state.offsetY}) scale(${state.scale})`);
+      }
+
+      function animateTransform(nextScale, nextOffsetX, nextOffsetY, duration = 180) {
+        stopViewAnimation();
+        const startScale = state.scale;
+        const startOffsetX = state.offsetX;
+        const startOffsetY = state.offsetY;
+        const startTime = performance.now();
+
+        function step(now) {
+          const elapsed = now - startTime;
+          const progress = Math.min(1, elapsed / duration);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          state.scale = startScale + (nextScale - startScale) * eased;
+          state.offsetX = startOffsetX + (nextOffsetX - startOffsetX) * eased;
+          state.offsetY = startOffsetY + (nextOffsetY - startOffsetY) * eased;
+          setTransform();
+          if (progress < 1) {
+            viewAnimationId = requestAnimationFrame(step);
+          } else {
+            state.scale = nextScale;
+            state.offsetX = nextOffsetX;
+            state.offsetY = nextOffsetY;
+            setTransform();
+            viewAnimationId = null;
+          }
+        }
+
+        viewAnimationId = requestAnimationFrame(step);
+      }
+
+      function focusNodeInView(node, options = {}) {
+        if (!node) return;
+        const nextScale = options.scale ?? state.scale;
+        const targetX = state.drawerOpen ? 340 : 500;
+        const targetY = 360;
+        const nextOffsetX = targetX - node.x * nextScale;
+        const nextOffsetY = targetY - node.y * nextScale;
+        if (options.animate === false) {
+          state.scale = nextScale;
+          state.offsetX = nextOffsetX;
+          state.offsetY = nextOffsetY;
+          setTransform();
+          return;
+        }
+        animateTransform(nextScale, nextOffsetX, nextOffsetY, options.duration || 180);
+      }
+
+      function getViewportTargetCenter() {
+        const viewportRect = viewport.getBoundingClientRect();
+        const drawerWidth = state.drawerOpen ? drawer.getBoundingClientRect().width + 26 : 0;
+        return {
+          x: (viewportRect.width - drawerWidth) / 2,
+          y: viewportRect.height / 2,
+        };
+      }
+
+      function fitView(options = {}) {
+        const nextScale = 0.9;
+        const { x: targetX, y: targetY } = getViewportTargetCenter();
+        const bounds = simulationNodes.reduce(
+          (acc, node) => ({
+            minX: Math.min(acc.minX, node.x),
+            maxX: Math.max(acc.maxX, node.x),
+            minY: Math.min(acc.minY, node.y),
+            maxY: Math.max(acc.maxY, node.y),
+          }),
+          { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
+        );
+        const centerX = Number.isFinite(bounds.minX) ? (bounds.minX + bounds.maxX) / 2 : 0;
+        const centerY = Number.isFinite(bounds.minY) ? (bounds.minY + bounds.maxY) / 2 : 0;
+        const nextOffsetX = targetX - centerX * nextScale;
+        const nextOffsetY = targetY - centerY * nextScale;
+        if (options.animate === false) {
+          state.scale = nextScale;
+          state.offsetX = nextOffsetX;
+          state.offsetY = nextOffsetY;
+          setTransform();
+          return;
+        }
+        animateTransform(nextScale, nextOffsetX, nextOffsetY, options.duration || 220);
+      }
+
+      function renderSceneFrame(visibleNodeMap = new Map(simulationNodes.map((node) => [node.id, node]))) {
+        simulationNodes.forEach((node) => {
+          node.element.setAttribute("transform", `translate(${node.x} ${node.y})`);
+          node.element.classList.toggle("is-selected", state.selectedNodeId === node.id || state.pinnedNodeId === node.id);
+        });
+
+        simulationLinks.forEach((link) => {
+          const source = visibleNodeMap.get(link.source);
+          const target = visibleNodeMap.get(link.target);
+          if (!source || !target) return;
+          link.line.setAttribute("x1", String(source.x));
+          link.line.setAttribute("y1", String(source.y));
+          link.line.setAttribute("x2", String(target.x));
+          link.line.setAttribute("y2", String(target.y));
+          const activeNodeId = state.hoveredNodeId || state.pinnedNodeId || state.selectedNodeId;
+          const isActive = activeNodeId && (link.source === activeNodeId || link.target === activeNodeId);
+          link.line.classList.toggle("is-active", Boolean(isActive));
+        });
+      }
+
+      function rebuildScene(visibleNodes, visibleLinks) {
+        linksLayer.innerHTML = "";
+        nodesLayer.innerHTML = "";
+        simulationNodes.length = 0;
+        simulationLinks.length = 0;
+
+        visibleLinks.forEach((link) => {
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("class", "graph-link-line" + (link.kind === "hub" ? " is-hub-link" : ""));
+          line.setAttribute("stroke-width", String(link.kind === "hub" ? 0.78 : Math.min(1.18, 0.42 + link.score * 0.1)));
+          linksLayer.appendChild(line);
+          simulationLinks.push({ ...link, line });
+        });
+
+        visibleNodes.forEach((node) => {
+          const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          group.setAttribute("class", "graph-node" + (state.selectedNodeId === node.id ? " is-selected" : ""));
+          group.dataset.nodeId = node.id;
+
+          const halo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          halo.setAttribute("class", "graph-node-halo");
+          halo.setAttribute("r", String(node.radius + 6.5));
+          halo.setAttribute("fill", categoryColorMap[node.category] || "#8a8f98");
+          group.appendChild(halo);
+
+          const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          circle.setAttribute("class", "graph-node-dot" + (node.nodeType === "hub" ? " is-hub-node" : ""));
+          circle.setAttribute("r", String(node.radius));
+          circle.setAttribute("fill", categoryColorMap[node.category] || "#8a8f98");
+          circle.setAttribute("filter", "url(#graphNodeShadow)");
+          group.appendChild(circle);
+
+          const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          label.setAttribute("class", "graph-node-label" + (node.nodeType === "hub" ? " is-hub-node" : ""));
+          label.setAttribute("x", String(node.radius + 8));
+          label.setAttribute("y", "3");
+          label.textContent = node.title;
+          group.appendChild(label);
+
+          nodesLayer.appendChild(group);
+          simulationNodes.push({ ...node, element: group, circle, halo, label });
+        });
+      }
+
+      function runSimulation() {
+        if (rafId) cancelAnimationFrame(rafId);
+        const spacingFactor = state.spacingFactor || 1;
+
+        function step() {
+          const visibleNodeMap = new Map(simulationNodes.map((node) => [node.id, node]));
+
+          for (let i = 0; i < simulationNodes.length; i += 1) {
+            const node = simulationNodes[i];
+            const anchorCategory = categoryAnchorMap[node.category] || { x: 0, y: 0 };
+            const anchorSite = node.siteIds.length ? (siteAnchorMap[node.siteIds[0]] || { x: 0, y: 0 }) : { x: 0, y: 0 };
+            node.vx += ((anchorCategory.x + anchorSite.x) - node.x) * (node.nodeType === "hub" ? 0.0012 : 0.0008);
+            node.vy += ((anchorCategory.y + anchorSite.y) - node.y) * (node.nodeType === "hub" ? 0.0012 : 0.0008);
+
+            for (let j = i + 1; j < simulationNodes.length; j += 1) {
+              const other = simulationNodes[j];
+              const dx = node.x - other.x;
+              const dy = node.y - other.y;
+              const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+              const minDistance = node.radius + other.radius + 58 * spacingFactor;
+              if (distance < minDistance) {
+                const push = (minDistance - distance) * 0.014;
+                const ux = dx / distance;
+                const uy = dy / distance;
+                node.vx += ux * push;
+                node.vy += uy * push;
+                other.vx -= ux * push;
+                other.vy -= uy * push;
+              }
+            }
+          }
+
+          simulationLinks.forEach((link) => {
+            const source = visibleNodeMap.get(link.source);
+            const target = visibleNodeMap.get(link.target);
+            if (!source || !target) return;
+            const dx = target.x - source.x;
+            const dy = target.y - source.y;
+            const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ideal = (link.kind === "hub" ? 118 : 138) * spacingFactor;
+            const force = (distance - ideal) * 0.0016;
+            const ux = dx / distance;
+            const uy = dy / distance;
+            source.vx += ux * force;
+            source.vy += uy * force;
+            target.vx -= ux * force;
+            target.vy -= uy * force;
+          });
+
+          simulationNodes.forEach((node) => {
+            node.vx *= 0.9;
+            node.vy *= 0.9;
+            if (Math.abs(node.vx) < 0.0015) node.vx = 0;
+            if (Math.abs(node.vy) < 0.0015) node.vy = 0;
+            node.x += node.vx;
+            node.y += node.vy;
+          });
+
+          if (state.focusNodeId && state.focusLockTicks > 0) {
+            const focusNode = visibleNodeMap.get(state.focusNodeId);
+            if (focusNode) {
+              focusNodeInView(focusNode, { scale: Math.max(state.scale, 1.08), duration: 220 });
+              state.focusLockTicks -= 1;
+              if (state.focusLockTicks <= 0) {
+                state.focusNodeId = null;
+              }
+            } else {
+              state.focusLockTicks = 0;
+              state.focusNodeId = null;
+            }
+          }
+
+          renderSceneFrame(visibleNodeMap);
+
+          rafId = requestAnimationFrame(step);
+        }
+
+        step();
+      }
+
+      function bindNodeInteractions() {
+        let draggedNode = null;
+        let moved = false;
+        let panStart = null;
+        const pointerState = new Map();
+
+        function clearHoverTimer() {
+          if (hoverClearTimer) {
+            clearTimeout(hoverClearTimer);
+            hoverClearTimer = null;
+          }
+        }
+
+        function setHoverNode(nodeId, { delayed = false } = {}) {
+          if (nodeId) cancelAutoFocus();
+          clearHoverTimer();
+          if (!delayed) {
+            state.hoveredNodeId = nodeId;
+            applyHoverState();
+            return;
+          }
+          hoverClearTimer = window.setTimeout(() => {
+            state.hoveredNodeId = null;
+            hoverClearTimer = null;
+            applyHoverState();
+          }, 320);
+        }
+
+        function applyHoverState() {
+          const activeNodeId = state.hoveredNodeId || state.pinnedNodeId || state.selectedNodeId;
+          const neighborIds = new Set();
+
+          if (activeNodeId) {
+            neighborIds.add(activeNodeId);
+            simulationLinks.forEach((link) => {
+              if (link.source === activeNodeId) neighborIds.add(link.target);
+              if (link.target === activeNodeId) neighborIds.add(link.source);
+            });
+          }
+
+          simulationNodes.forEach((node) => {
+            const isRelated = !activeNodeId || neighborIds.has(node.id);
+            node.element.classList.toggle("is-dimmed", !isRelated);
+            node.element.classList.toggle("is-hovered", Boolean(state.hoveredNodeId && node.id === state.hoveredNodeId));
+          });
+
+          simulationLinks.forEach((link) => {
+            const isRelated = !activeNodeId || link.source === activeNodeId || link.target === activeNodeId;
+            link.line.classList.toggle("is-dimmed", !isRelated);
+            link.line.classList.toggle("is-active", Boolean(activeNodeId) && isRelated);
+          });
+        }
+
+        viewport.addEventListener(
+          "wheel",
+          (event) => {
+            event.preventDefault();
+            cancelAutoFocus();
+            stopViewAnimation();
+            const zoomFactor = Math.exp(-event.deltaY * 0.0016);
+            const nextScale = Math.max(0.45, Math.min(1.9, state.scale * zoomFactor));
+            const rect = viewport.getBoundingClientRect();
+            const pointerX = event.clientX - rect.left;
+            const pointerY = event.clientY - rect.top;
+            const worldX = (pointerX - state.offsetX) / state.scale;
+            const worldY = (pointerY - state.offsetY) / state.scale;
+            const nextOffsetX = pointerX - worldX * nextScale;
+            const nextOffsetY = pointerY - worldY * nextScale;
+            state.scale = nextScale;
+            state.offsetX = nextOffsetX;
+            state.offsetY = nextOffsetY;
+            setTransform();
+          },
+          { passive: false }
+        );
+
+        svg.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          cancelAutoFocus();
+          stopViewAnimation();
+          const nodeElement = event.target.closest("[data-node-id]");
+          if (nodeElement) {
+            draggedNode = simulationNodes.find((node) => node.id === nodeElement.dataset.nodeId) || null;
+            moved = false;
+            pointerState.set(event.pointerId, { x: event.clientX, y: event.clientY, nodeId: draggedNode?.id || null });
+            svg.setPointerCapture(event.pointerId);
+            return;
+          }
+
+          panStart = {
+            x: event.clientX,
+            y: event.clientY,
+            offsetX: state.offsetX,
+            offsetY: state.offsetY,
+          };
+          svg.setPointerCapture(event.pointerId);
+        });
+
+        svg.addEventListener("pointermove", (event) => {
+          const hoverNodeElement = event.target.closest("[data-node-id]");
+          const nextHoveredId = hoverNodeElement ? hoverNodeElement.dataset.nodeId : null;
+          if (nextHoveredId && nextHoveredId !== state.hoveredNodeId) {
+            setHoverNode(nextHoveredId);
+          } else if (!nextHoveredId && state.hoveredNodeId) {
+            setHoverNode(null, { delayed: true });
+          }
+
+          if (draggedNode) {
+            const pointer = pointerState.get(event.pointerId);
+            if (!pointer) return;
+            const dx = (event.clientX - pointer.x) / state.scale;
+            const dy = (event.clientY - pointer.y) / state.scale;
+            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
+            draggedNode.x += dx;
+            draggedNode.y += dy;
+            draggedNode.vx = 0;
+            draggedNode.vy = 0;
+            pointerState.set(event.pointerId, { x: event.clientX, y: event.clientY, nodeId: draggedNode.id });
+            renderSceneFrame();
+            return;
+          }
+
+          if (panStart) {
+            state.offsetX = panStart.offsetX + (event.clientX - panStart.x);
+            state.offsetY = panStart.offsetY + (event.clientY - panStart.y);
+            setTransform();
+          }
+        });
+
+        svg.addEventListener("pointerup", (event) => {
+          if (draggedNode) {
+            const nodeId = draggedNode.id;
+            if (!moved) {
+              state.selectedNodeId = nodeId;
+              state.pinnedNodeId = null;
+              applyHoverState();
+              window.location.href = getNodeHref(draggedNode);
+            }
+            draggedNode = null;
+            pointerState.delete(event.pointerId);
+          }
+
+          panStart = null;
+          if (svg.hasPointerCapture(event.pointerId)) {
+            svg.releasePointerCapture(event.pointerId);
+          }
+        });
+
+        svg.addEventListener("pointerleave", () => {
+          if (state.hoveredNodeId) {
+            setHoverNode(null, { delayed: true });
+          }
+        });
+
+        svg.addEventListener("pointercancel", (event) => {
+          draggedNode = null;
+          panStart = null;
+          pointerState.delete(event.pointerId);
+          if (svg.hasPointerCapture(event.pointerId)) {
+            svg.releasePointerCapture(event.pointerId);
+          }
+        });
+
+        svg.addEventListener("lostpointercapture", () => {
+          draggedNode = null;
+          panStart = null;
+        });
+
+        svg.addEventListener("contextmenu", (event) => {
+          const nodeElement = event.target.closest("[data-node-id]");
+          if (!nodeElement) return;
+          event.preventDefault();
+          cancelAutoFocus();
+          const nodeId = nodeElement.dataset.nodeId;
+          state.pinnedNodeId = state.pinnedNodeId === nodeId ? null : nodeId;
+          state.hoveredNodeId = null;
+          applyHoverState();
+        });
+
+        return { applyHoverState };
+      }
+
+      function updateGraph() {
+        const visibleCards = getVisibleCards();
+        const visibleHubs = getVisibleHubs(visibleCards);
+        const visibleNodes = [...visibleCards, ...visibleHubs];
+        const visibleLinks = getVisibleLinks(visibleCards, visibleHubs);
+        if (!state.spacingTouched) {
+          state.spacingFactor = getAutoSpacingFactor(visibleNodes.length);
+        }
+        syncDensityControl();
+        ensureSelectedNodeStillVisible(visibleNodes);
+        if (state.initialFocusPending && state.focusNodeId && visibleNodes.some((node) => node.id === state.focusNodeId)) {
+          state.selectedNodeId = state.focusNodeId;
+          state.pinnedNodeId = null;
+          state.focusLockTicks = 36;
+          state.initialFocusPending = false;
+        }
+        renderFilters();
+
+        const hasNodes = visibleNodes.length > 0;
+        const hasLinks = visibleLinks.length > 0;
+        emptyState.hidden = hasNodes;
+        graphNote.hidden = !hasNodes || hasLinks;
+        viewport.classList.toggle("has-note", hasNodes && !hasLinks);
+
+        if (!hasNodes) {
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+          linksLayer.innerHTML = "";
+          nodesLayer.innerHTML = "";
+          return;
+        }
+
+        rebuildScene(visibleNodes, visibleLinks);
+        runSimulation();
+
+        const nextParams = new URLSearchParams();
+        nextParams.set("category", state.categories.size === 1 ? [...state.categories][0] : "all");
+        nextParams.set(
+          "site",
+          state.sites.size === 0
+            ? "none"
+            : state.sites.size === 1
+              ? [...state.sites][0]
+              : state.sites.size === sites.length
+                ? "all"
+                : "multi"
+        );
+        if (state.initialFocusPending && state.focusNodeId) nextParams.set("focus", state.focusNodeId);
+        if (returnTo) nextParams.set("returnTo", returnTo);
+        window.history.replaceState({}, "", `./graph.html?${nextParams.toString()}`);
+      }
+
+      document.getElementById("graph-reset-filters").addEventListener("click", () => {
+        cancelAutoFocus();
+        state.categories = new Set(defaultCategoryIds);
+        state.sites = new Set(defaultSiteIds);
+        state.selectedNodeId = focusCard?.id || null;
+        state.pinnedNodeId = null;
+        state.hoveredNodeId = null;
+        state.spacingTouched = false;
+        updateGraph();
+        fitView();
+      });
+
+      densityRange.addEventListener("input", () => {
+        state.spacingTouched = true;
+        state.spacingFactor = Number(densityRange.value) / 100;
+        syncDensityControl();
+        updateGraph();
+        fitView({ duration: 180 });
+      });
+
+      fitView({ animate: false });
+      bindNodeInteractions();
+      updateGraph();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>系统说明中心</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="app-sidebar">
+        <div class="sidebar-topbar">
+          <div class="sidebar-brand">
+            <div class="brand-mark">OE</div>
+            <div class="brand-copy">
+              <p class="eyebrow sidebar-eyebrow">Operations Expert</p>
+              <h1>智能活动系统</h1>
+            </div>
+          </div>
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="切换侧边栏">⇤</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <a class="sidebar-nav-item" href="./index.html" title="主页">
+            <span class="nav-label-full">主页</span>
+            <span class="nav-label-short">主</span>
+          </a>
+          <a class="sidebar-nav-item active" href="./system.html" title="系统说明">
+            <span class="nav-label-full">系统说明</span>
+            <span class="nav-label-short">系</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./protocol.html" title="工作协议台">
+            <span class="nav-label-full">工作协议台</span>
+            <span class="nav-label-short">协</span>
+          </a>
+          <a class="sidebar-nav-item" href="./warehouse.html?category=activity" title="数据仓库">
+            <span class="nav-label-full">数据仓库</span>
+            <span class="nav-label-short">库</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./graph.html" title="关系图谱">
+            <span class="nav-label-full">关系图谱</span>
+            <span class="nav-label-short">图</span>
+          </a>
+          <a class="sidebar-nav-item" href="./growth.html" title="AI成长记录">
+            <span class="nav-label-full">AI成长记录</span>
+            <span class="nav-label-short">长</span>
+          </a>
+          <a class="sidebar-nav-item" href="./capabilities.html" title="专家能力 Wiki">
+            <span class="nav-label-full">专家能力 Wiki</span>
+            <span class="nav-label-short">能</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="app-main">
+        <div class="shell system-shell">
+          <div class="page-titlebar">
+            <div>
+              <p class="eyebrow">System Handbook</p>
+              <h1>系统说明</h1>
+            </div>
+            <div class="titlebar-actions">
+              <span id="system-generated-at" class="muted tiny"></span>
+            </div>
+          </div>
+
+          <section class="system-filter-bar">
+            <div id="system-category-tabs" class="filter-list horizontal"></div>
+          </section>
+
+          <section class="system-console">
+            <aside class="system-side-panel">
+              <div class="panel-label">文档目录</div>
+              <div id="system-doc-list" class="system-doc-list"></div>
+            </aside>
+
+            <section class="system-detail-panel">
+              <div id="system-detail-empty" class="empty" hidden>当前没有可展示的说明文档。</div>
+              <div id="system-detail"></div>
+            </section>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="./system-docs-data.js"></script>
+    <script>
+      const appShell = document.getElementById("app-shell");
+      const sidebarToggle = document.getElementById("sidebar-toggle");
+      const collapsed = localStorage.getItem("lite-sidebar-collapsed") === "true";
+
+      function applySidebarState(value) {
+        appShell.classList.toggle("sidebar-collapsed", value);
+        sidebarToggle.textContent = value ? "⇥" : "⇤";
+      }
+
+      applySidebarState(collapsed);
+      sidebarToggle.addEventListener("click", () => {
+        const next = !appShell.classList.contains("sidebar-collapsed");
+        localStorage.setItem("lite-sidebar-collapsed", String(next));
+        applySidebarState(next);
+      });
+
+      const systemDocsData = window.SYSTEM_DOCS_DATA || {};
+      const state = {
+        category: "all",
+        docId: systemDocsData.docs?.find((item) => item.featured)?.id || systemDocsData.docs?.[0]?.id || null,
+      };
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function slugify(value, counts) {
+        const base = String(value || "")
+          .toLowerCase()
+          .replace(/[`~!@#$%^&*()+=<>?:"{},./;'\[\]\\|]+/g, " ")
+          .trim()
+          .replace(/\s+/g, "-")
+          .replace(/^-+|-+$/g, "") || "section";
+        const count = counts.get(base) || 0;
+        counts.set(base, count + 1);
+        return count ? `${base}-${count + 1}` : base;
+      }
+
+      function parseInline(text) {
+        return escapeHtml(text)
+          .replace(/\[\[([^\]]+)\]\]/g, '<span class="system-wikilink">$1</span>')
+          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, href) => {
+            if (/^https?:\/\//.test(href)) {
+              return `<a class="system-inline-link" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
+            }
+            return `<span class="system-inline-link muted">${escapeHtml(label)}</span>`;
+          })
+          .replace(/`([^`]+)`/g, "<code>$1</code>")
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      }
+
+      function parseImage(line) {
+        const match = line.trim().match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+        if (!match) return null;
+        const alt = match[1].trim();
+        const src = match[2].trim();
+        return `
+          <figure class="system-slide-figure">
+            <img class="system-slide-image" src="${escapeHtml(src)}" alt="${escapeHtml(alt || "系统说明图片")}" loading="lazy" />
+            ${alt ? `<figcaption class="system-slide-caption">${escapeHtml(alt)}</figcaption>` : ""}
+          </figure>
+        `;
+      }
+
+      function parseList(lines, ordered) {
+        function build(items, level) {
+          if (!items.length) return "";
+          const tag = ordered ? "ol" : "ul";
+          return `<${tag}>${items
+            .map((item) => {
+              const children = build(item.children, level + 1);
+              return `<li>${parseInline(item.content)}${children}</li>`;
+            })
+            .join("")}</${tag}>`;
+        }
+
+        const root = [];
+        const stack = [{ indent: -1, items: root }];
+        lines.forEach((line) => {
+          const match = line.match(/^(\s*)(?:[-*]|\d+\.)\s+(.*)$/);
+          if (!match) return;
+          const indent = match[1].length;
+          const content = match[2].trim();
+          while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
+            stack.pop();
+          }
+          const item = { content, children: [] };
+          stack[stack.length - 1].items.push(item);
+          stack.push({ indent, items: item.children });
+        });
+        return build(root, 0);
+      }
+
+      function parseTable(lines) {
+        const rows = lines.map((line) =>
+          line
+            .trim()
+            .replace(/^\|/, "")
+            .replace(/\|$/, "")
+            .split("|")
+            .map((cell) => cell.trim())
+        );
+        const [header, , ...body] = rows;
+        return `
+          <div class="system-table-wrap">
+            <table class="system-table">
+              <thead>
+                <tr>${header.map((cell) => `<th>${parseInline(cell)}</th>`).join("")}</tr>
+              </thead>
+              <tbody>
+                ${body
+                  .map(
+                    (row) => `<tr>${row.map((cell) => `<td>${parseInline(cell)}</td>`).join("")}</tr>`
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      function renderMarkdown(markdown) {
+        const lines = String(markdown || "").replace(/\r/g, "").split("\n");
+        const blocks = [];
+        const headingCounts = new Map();
+        let index = 0;
+
+        while (index < lines.length) {
+          const line = lines[index];
+          const trimmed = line.trim();
+
+          if (!trimmed) {
+            index += 1;
+            continue;
+          }
+
+          const fenceMatch = line.match(/^```(\S+)?\s*$/);
+          if (fenceMatch) {
+            const language = fenceMatch[1] || "";
+            const content = [];
+            index += 1;
+            while (index < lines.length && !lines[index].startsWith("```")) {
+              content.push(lines[index]);
+              index += 1;
+            }
+            index += 1;
+            const code = content.join("\n").trim();
+            if (language === "mermaid") {
+              blocks.push(
+                `<div class="system-mermaid-card">
+                  <div class="system-mermaid-head">
+                    <span class="eyebrow">Mermaid Flow</span>
+                  </div>
+                  <div class="system-mermaid" data-mermaid="${escapeHtml(code)}">
+                    <pre>${escapeHtml(code)}</pre>
+                  </div>
+                </div>`
+              );
+            } else {
+              blocks.push(
+                `<pre class="system-code-block"><code>${escapeHtml(code)}</code></pre>`
+              );
+            }
+            continue;
+          }
+
+          const headingMatch = line.match(/^(#{1,4})\s+(.+)$/);
+          if (headingMatch) {
+            const level = Math.min(headingMatch[1].length + 1, 5);
+            const text = headingMatch[2].trim();
+            const id = slugify(text, headingCounts);
+            blocks.push(`<h${level} id="${id}">${parseInline(text)}</h${level}>`);
+            index += 1;
+            continue;
+          }
+
+          const imageBlock = parseImage(line);
+          if (imageBlock) {
+            blocks.push(imageBlock);
+            index += 1;
+            continue;
+          }
+
+          if (/^(\|.*\|)\s*$/.test(line) && index + 1 < lines.length && /^\|(?:\s*:?-+:?\s*\|)+\s*$/.test(lines[index + 1].trim())) {
+            const tableLines = [line, lines[index + 1]];
+            index += 2;
+            while (index < lines.length && /^\|.*\|\s*$/.test(lines[index])) {
+              tableLines.push(lines[index]);
+              index += 1;
+            }
+            blocks.push(parseTable(tableLines));
+            continue;
+          }
+
+          if (/^(\s*)([-*])\s+/.test(line)) {
+            const listLines = [];
+            while (index < lines.length && /^(\s*)([-*])\s+/.test(lines[index])) {
+              listLines.push(lines[index]);
+              index += 1;
+            }
+            blocks.push(`<div class="system-list-block">${parseList(listLines, false)}</div>`);
+            continue;
+          }
+
+          if (/^(\s*)\d+\.\s+/.test(line)) {
+            const listLines = [];
+            while (index < lines.length && /^(\s*)\d+\.\s+/.test(lines[index])) {
+              listLines.push(lines[index]);
+              index += 1;
+            }
+            blocks.push(`<div class="system-list-block">${parseList(listLines, true)}</div>`);
+            continue;
+          }
+
+          if (trimmed.startsWith(">")) {
+            const quoteLines = [];
+            while (index < lines.length && lines[index].trim().startsWith(">")) {
+              quoteLines.push(lines[index].trim().replace(/^>\s?/, ""));
+              index += 1;
+            }
+            blocks.push(`<blockquote class="system-quote">${quoteLines.map(parseInline).join("<br>")}</blockquote>`);
+            continue;
+          }
+
+          if (/^---+$/.test(trimmed)) {
+            blocks.push('<hr class="system-divider" />');
+            index += 1;
+            continue;
+          }
+
+          const paragraphLines = [trimmed];
+          index += 1;
+          while (
+            index < lines.length &&
+            lines[index].trim() &&
+            !lines[index].startsWith("```") &&
+            !/^(#{1,4})\s+/.test(lines[index]) &&
+            !/^(\s*)([-*]|\d+\.)\s+/.test(lines[index]) &&
+            !lines[index].trim().startsWith(">") &&
+            !/^\|.*\|\s*$/.test(lines[index].trim()) &&
+            !/^---+$/.test(lines[index].trim())
+          ) {
+            paragraphLines.push(lines[index].trim());
+            index += 1;
+          }
+          blocks.push(`<p>${parseInline(paragraphLines.join(" "))}</p>`);
+        }
+
+        return blocks.join("\n");
+      }
+
+      function filteredDocs() {
+        const docs = systemDocsData.docs || [];
+        if (state.category === "all") return docs;
+        return docs.filter((item) => item.category === state.category);
+      }
+
+      function currentDoc() {
+        const docs = filteredDocs();
+        return docs.find((item) => item.id === state.docId) || docs[0] || null;
+      }
+
+      function ensureDocSelection() {
+        const docs = filteredDocs();
+        if (!docs.length) {
+          state.docId = null;
+          return;
+        }
+        if (!docs.some((item) => item.id === state.docId)) {
+          state.docId = docs[0].id;
+        }
+      }
+
+      function renderTop() {
+        document.getElementById("system-generated-at").textContent = `文档更新：${String(systemDocsData.generatedAt || "").replace("T", " ").replace(/\.\d+Z$/, "Z")}`;
+      }
+
+      function renderCategories() {
+        const categories = [{ id: "all", label: "全部文档" }, ...(systemDocsData.categories || [])];
+        const container = document.getElementById("system-category-tabs");
+        container.innerHTML = "";
+        categories.forEach((category) => {
+          const button = document.createElement("button");
+          button.className = "filter-btn" + (state.category === category.id ? " active" : "");
+          button.textContent = category.label;
+          button.onclick = () => {
+            state.category = category.id;
+            ensureDocSelection();
+            renderCategories();
+            renderDocList();
+            renderDetail();
+          };
+          container.appendChild(button);
+        });
+      }
+
+      function renderDocList() {
+        const docs = filteredDocs();
+        const container = document.getElementById("system-doc-list");
+        if (!docs.length) {
+          container.innerHTML = '<div class="empty">当前分类下还没有说明文档。</div>';
+          return;
+        }
+
+        container.innerHTML = docs
+          .map(
+            (doc) => `
+              <button class="system-doc-card${doc.id === state.docId ? " active" : ""}" data-doc-id="${escapeHtml(doc.id)}">
+                <span>${escapeHtml(doc.title)}</span>
+              </button>
+            `
+          )
+          .join("");
+
+        container.querySelectorAll("[data-doc-id]").forEach((node) => {
+          node.addEventListener("click", () => {
+            state.docId = node.getAttribute("data-doc-id");
+            renderDocList();
+            renderDetail();
+            scrollSystemPageTopIntoView();
+          });
+        });
+      }
+
+      function scrollSystemPageTopIntoView() {
+        const titlebar = document.querySelector(".system-shell .page-titlebar");
+        if (!titlebar) return;
+        const top = titlebar.getBoundingClientRect().top + window.scrollY - 12;
+        window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+      }
+
+      async function renderMermaid() {
+        const nodes = Array.from(document.querySelectorAll(".system-mermaid"));
+        if (!nodes.length) return;
+        try {
+          const mermaidModule = await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs");
+          const mermaid = mermaidModule.default;
+          mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: "loose",
+            theme: "base",
+            themeVariables: {
+              primaryColor: "#e6f7f4",
+              primaryBorderColor: "#177d73",
+              primaryTextColor: "#172127",
+              lineColor: "#176b62",
+              secondaryColor: "#fff6e4",
+              tertiaryColor: "#f6fbf9",
+              fontFamily: "SF Pro Text, Avenir Next, PingFang SC, sans-serif",
+            },
+          });
+          for (const [index, node] of nodes.entries()) {
+            const source = node.dataset.mermaid || "";
+            const id = `system-mermaid-${index}-${Date.now()}`;
+            const rendered = await mermaid.render(id, source);
+            node.innerHTML = rendered.svg;
+          }
+        } catch (error) {
+          nodes.forEach((node) => {
+            const source = node.dataset.mermaid || "";
+            node.innerHTML = `<pre>${escapeHtml(source)}</pre><div class="muted tiny">当前环境未成功加载 Mermaid，先展示原始流程图代码。</div>`;
+          });
+        }
+      }
+
+      function renderDetail() {
+        ensureDocSelection();
+        const doc = currentDoc();
+        const detail = document.getElementById("system-detail");
+        const empty = document.getElementById("system-detail-empty");
+
+        if (!doc) {
+          empty.hidden = false;
+          detail.innerHTML = "";
+          return;
+        }
+
+        empty.hidden = true;
+        detail.innerHTML = `
+          <article class="system-detail-doc">
+            <header class="system-detail-head-min">
+              <div class="system-detail-title-block">
+                <h2>${escapeHtml(doc.title)}</h2>
+                <p class="system-detail-summary">${escapeHtml(doc.summary)}</p>
+              </div>
+              <div class="system-detail-meta-inline">
+                <span>${escapeHtml(doc.category)}</span>
+                <span>源文档：${escapeHtml(doc.sourcePath)}</span>
+              </div>
+            </header>
+
+            <section class="system-markdown-body">
+              ${renderMarkdown(doc.markdown)}
+            </section>
+          </article>
+        `;
+
+        renderMermaid();
+      }
+
+      renderTop();
+      ensureDocSelection();
+      renderCategories();
+      renderDocList();
+      renderDetail();
+    </script>
+  </body>
+</html>

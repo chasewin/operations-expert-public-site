@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 成长记录</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="app-sidebar">
+        <div class="sidebar-topbar">
+          <div class="sidebar-brand">
+            <div class="brand-mark">OE</div>
+            <div class="brand-copy">
+              <p class="eyebrow sidebar-eyebrow">Operations Expert</p>
+              <h1>智能活动系统</h1>
+            </div>
+          </div>
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="切换侧边栏">⇤</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <a class="sidebar-nav-item" href="./index.html" title="主页">
+            <span class="nav-label-full">主页</span>
+            <span class="nav-label-short">主</span>
+          </a>
+          <a class="sidebar-nav-item" href="./system.html" title="系统说明">
+            <span class="nav-label-full">系统说明</span>
+            <span class="nav-label-short">系</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./protocol.html" title="工作协议台">
+            <span class="nav-label-full">工作协议台</span>
+            <span class="nav-label-short">协</span>
+          </a>
+          <a class="sidebar-nav-item" href="./warehouse.html?category=activity" title="数据仓库">
+            <span class="nav-label-full">数据仓库</span>
+            <span class="nav-label-short">库</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./graph.html" title="关系图谱">
+            <span class="nav-label-full">关系图谱</span>
+            <span class="nav-label-short">图</span>
+          </a>
+          <a class="sidebar-nav-item active" href="./growth.html" title="AI成长记录">
+            <span class="nav-label-full">AI成长记录</span>
+            <span class="nav-label-short">长</span>
+          </a>
+          <a class="sidebar-nav-item" href="./capabilities.html" title="专家能力 Wiki">
+            <span class="nav-label-full">专家能力 Wiki</span>
+            <span class="nav-label-short">能</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="app-main">
+        <div class="shell growth-shell-v2">
+          <div class="page-titlebar growth-titlebar">
+            <div>
+              <p class="eyebrow">AI Expert Growth</p>
+              <h1>AI 专家成长</h1>
+            </div>
+            <a class="primary-pill" href="./capabilities.html">查看专家能力 Wiki</a>
+          </div>
+
+          <section class="growth-summary-panel">
+            <div class="growth-filter-row">
+              <div class="growth-filter-head">
+                <span class="growth-filter-label">确认状态筛选</span>
+              </div>
+              <div id="growth-status-list" class="filter-list horizontal"></div>
+            </div>
+            <div class="growth-filter-row">
+              <div class="growth-filter-head">
+                <span class="growth-filter-label">能力主线筛选</span>
+              </div>
+              <div id="growth-track-list" class="filter-list horizontal"></div>
+            </div>
+            <div class="growth-filter-row">
+              <div class="growth-filter-head">
+                <span class="growth-filter-label">成长类型筛选</span>
+              </div>
+              <div id="growth-type-list" class="filter-list horizontal"></div>
+              <div class="muted tiny" id="growth-count"></div>
+            </div>
+          </section>
+
+          <section class="growth-workbench">
+            <div class="growth-cards-panel">
+              <div id="growth-cards" class="growth-cards-grid"></div>
+              <div id="growth-empty" class="empty growth-empty" hidden>当前筛选条件下没有成长记录。</div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <div id="growth-reading-modal" class="reading-modal" hidden>
+      <div class="reading-modal-backdrop" data-growth-modal-close></div>
+      <div class="reading-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="growth-reading-modal-title">
+        <div class="reading-modal-header">
+          <div>
+            <p class="eyebrow">Growth Reading</p>
+            <h3 id="growth-reading-modal-title">成长详情</h3>
+          </div>
+          <button type="button" class="reading-modal-close" data-growth-modal-close aria-label="关闭成长详情弹窗">
+            ×
+          </button>
+        </div>
+        <div id="growth-modal-detail" class="reading-modal-content"></div>
+      </div>
+    </div>
+
+    <script src="./growth-data.js"></script>
+    <script>
+      const appShell = document.getElementById("app-shell");
+      const sidebarToggle = document.getElementById("sidebar-toggle");
+      const collapsed = localStorage.getItem("lite-sidebar-collapsed") === "true";
+
+      function applySidebarState(value) {
+        appShell.classList.toggle("sidebar-collapsed", value);
+        sidebarToggle.textContent = value ? "⇥" : "⇤";
+      }
+
+      applySidebarState(collapsed);
+      sidebarToggle.addEventListener("click", () => {
+        const next = !appShell.classList.contains("sidebar-collapsed");
+        localStorage.setItem("lite-sidebar-collapsed", String(next));
+        applySidebarState(next);
+      });
+
+      const growthData = window.GROWTH_DATA || { items: [], statuses: [], types: [], tracks: [] };
+
+      function normalizeGrowthRecordTitle(value) {
+        const raw = String(value || "").trim();
+        if (!raw) return "未命名成长记录";
+        return raw
+          .replace(/(?:活动分析|案例分析|分析|训练)后的成长(?:候选整理|记录)$/g, "")
+          .replace(/成长候选整理$/g, "")
+          .replace(/成长记录$/g, "")
+          .replace(/[：:]\s*$/g, "")
+          .replace(/成长候选整理/g, "成长记录")
+          .replace(/待确认成长[:：]/g, "待确认成长记录：")
+          .replace(/已确认成长[:：]/g, "已确认成长记录：")
+          .trim();
+      }
+
+      function buildGrowthGroups(items) {
+        const groups = [];
+        const groupMap = new Map();
+
+        (items || []).forEach((item, index) => {
+          const caseKey = safeList(item.sourceCaseIds).join("|");
+          const keyBase = caseKey ? `case:${caseKey}` : `source:${item.sourceLabel || item.id}`;
+          const trackKey = safeList(item.trackIds)[0] || "untracked";
+          const key = `${item.statusId}:${trackKey}:${keyBase}`;
+
+          if (!groupMap.has(key)) {
+            const group = {
+              groupId: key,
+              items: [],
+              sortIndex: index,
+            };
+            groupMap.set(key, group);
+            groups.push(group);
+          }
+
+          groupMap.get(key).items.push(item);
+        });
+
+        return groups
+          .map((group) => {
+            const itemsSorted = [...group.items].sort((a, b) => {
+              if (a.date === b.date) return 0;
+              return a.date > b.date ? -1 : 1;
+            });
+            const primary = itemsSorted[0];
+            const uniqueTypes = [...new Set(itemsSorted.map((item) => item.typeId))];
+            const uniqueTypeLabels = [...new Set(itemsSorted.map((item) => item.type))];
+            const uniqueSources = [...new Set(itemsSorted.map((item) => item.sourceLabel).filter(Boolean))];
+            const uniqueTrackIds = [...new Set(itemsSorted.flatMap((item) => safeList(item.trackIds)))];
+            const uniqueTrackLabels = [...new Set(itemsSorted.flatMap((item) => safeList(item.trackTags)))];
+            const primaryTrackId = uniqueTrackIds.includes("activity-planning")
+              ? "activity-planning"
+              : uniqueTrackIds[0] || null;
+            const primaryTrackLabel =
+              (growthData.tracks || []).find((track) => track.id === primaryTrackId)?.label ||
+              uniqueTrackLabels[0] ||
+              "待补充主线";
+
+            return {
+              groupId: group.groupId,
+              primary,
+              items: itemsSorted,
+              title:
+                itemsSorted.length > 1
+                  ? normalizeGrowthRecordTitle(primary.sourceLabel || primary.title)
+                  : normalizeGrowthRecordTitle(primary.title),
+              summary:
+                itemsSorted.length > 1
+                  ? "围绕同一活动或同一轮训练形成的连续成长记录，正式确认内容在弹窗详情中展开。"
+                  : (primary.summary || "待补充摘要"),
+              typeId: uniqueTypes.length === 1 ? uniqueTypes[0] : "mixed",
+              type: uniqueTypeLabels.length === 1 ? uniqueTypeLabels[0] : "多类型成长",
+              typeLabels: uniqueTypeLabels,
+              statusId: primary.statusId,
+              statusLabel: primary.statusLabel,
+              statusDetail: primary.statusDetail,
+              primaryTrackId,
+              primaryTrackLabel,
+              trackIds: uniqueTrackIds,
+              trackLabels: uniqueTrackLabels,
+              sourceLabel: uniqueSources[0] || "待补充来源",
+              sourceLabels: uniqueSources,
+              date: primary.date,
+              sourceCaseIds: [...new Set(itemsSorted.flatMap((item) => safeList(item.sourceCaseIds)))],
+            };
+          })
+          .sort((a, b) => {
+            if (a.date === b.date) return a.primary.id < b.primary.id ? 1 : -1;
+            return a.date > b.date ? -1 : 1;
+          });
+      }
+
+      const groupedGrowth = buildGrowthGroups(growthData.items || []);
+      const params = new URLSearchParams(window.location.search);
+      const requestedGrowthId = params.get("id");
+      const selectedGroupFromParam = requestedGrowthId
+        ? groupedGrowth.find((group) => group.items.some((item) => item.id === requestedGrowthId))
+        : null;
+      const defaultStatusId =
+        (selectedGroupFromParam && selectedGroupFromParam.statusId) ||
+        (growthData.statuses && growthData.statuses[0] && growthData.statuses[0].id) ||
+        "confirmed";
+      const defaultTrackId =
+        (selectedGroupFromParam && selectedGroupFromParam.primaryTrackId) ||
+        (growthData.tracks && growthData.tracks[0] && growthData.tracks[0].id) ||
+        null;
+      const state = {
+        status: defaultStatusId,
+        track: defaultTrackId,
+        type: "all",
+        selectedId: selectedGroupFromParam?.groupId || (groupedGrowth[0] && groupedGrowth[0].groupId) || null,
+      };
+      const shouldAutoOpenRequested = Boolean(selectedGroupFromParam);
+      let hasAutoOpenedRequested = false;
+      const growthReadingModal = document.getElementById("growth-reading-modal");
+      const growthModalDetail = document.getElementById("growth-modal-detail");
+
+      function getFilteredGroups() {
+        return groupedGrowth.filter((group) => {
+          const statusMatch = group.statusId === state.status;
+          const trackMatch = !state.track || group.primaryTrackId === state.track;
+          const typeMatch = state.type === "all" || group.typeId === state.type;
+          return statusMatch && trackMatch && typeMatch;
+        });
+      }
+
+      function getCurrentSelection(items) {
+        const picked = items.find((item) => item.groupId === state.selectedId);
+        return picked || items[0] || null;
+      }
+
+      function safeList(items) {
+        return (items || []).filter(Boolean);
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function buildParagraphs(values) {
+        return safeList(values)
+          .map((value) => value && String(value).trim())
+          .filter(Boolean)
+          .map((value) => `<p>${escapeHtml(value)}</p>`)
+          .join("");
+      }
+
+      function buildInlineMetaList(label, values) {
+        const items = safeList(values);
+        if (!items.length) return "";
+        return `
+          <li>
+            <strong>${escapeHtml(label)}：</strong>${escapeHtml(items.join("、"))}
+          </li>
+        `;
+      }
+
+      function openGrowthModal(group) {
+        renderDetail(group, "growth-modal-detail");
+        growthReadingModal.hidden = false;
+        document.body.classList.add("reading-modal-open");
+      }
+
+      function closeGrowthModal() {
+        growthReadingModal.hidden = true;
+        document.body.classList.remove("reading-modal-open");
+      }
+
+      function getGrowthSerial(groupId) {
+        const index = groupedGrowth.findIndex((entry) => entry.groupId === groupId);
+        if (index < 0) return "00";
+        return String(groupedGrowth.length - index).padStart(2, "0");
+      }
+
+      async function copyText(value) {
+        try {
+          await navigator.clipboard.writeText(value);
+        } catch (error) {
+          console.error("复制失败", error);
+        }
+      }
+
+      function renderStatusFilters() {
+        const container = document.getElementById("growth-status-list");
+        const entries = (growthData.statuses || []).map((status) => ({
+          id: status.id,
+          label: status.label,
+          count: groupedGrowth.filter((group) => group.statusId === status.id).length,
+        }));
+
+        container.innerHTML = "";
+        entries.forEach((entry) => {
+          const button = document.createElement("button");
+          button.className = "filter-btn" + (state.status === entry.id ? " active" : "");
+          button.textContent = `${entry.label} · ${entry.count}`;
+          button.onclick = () => {
+            state.status = entry.id;
+            state.track = (growthData.tracks && growthData.tracks[0] && growthData.tracks[0].id) || null;
+            state.type = "all";
+            const nextItems = getFilteredGroups();
+            if (state.track && !nextItems.length) {
+              const statusGroups = groupedGrowth.filter((group) => group.statusId === state.status);
+              state.track = statusGroups[0]?.primaryTrackId || null;
+            }
+            const finalItems = getFilteredGroups();
+            state.selectedId = getCurrentSelection(finalItems)?.groupId || null;
+            renderStatusFilters();
+            renderTrackFilters();
+            renderTypeFilters();
+            renderWorkbench();
+          };
+          container.appendChild(button);
+        });
+      }
+
+      function renderTrackFilters() {
+        const container = document.getElementById("growth-track-list");
+        const entries = (growthData.tracks || []).map((track) => ({
+          id: track.id,
+          label: track.label,
+          count: groupedGrowth.filter((group) => group.statusId === state.status && group.primaryTrackId === track.id)
+            .length,
+        }));
+
+        container.innerHTML = "";
+        entries.forEach((entry) => {
+          const button = document.createElement("button");
+          button.className = "filter-btn" + (state.track === entry.id ? " active" : "");
+          button.textContent = `${entry.label} · ${entry.count}`;
+          button.onclick = () => {
+            state.track = entry.id;
+            state.type = "all";
+            const nextItems = getFilteredGroups();
+            state.selectedId = getCurrentSelection(nextItems)?.groupId || null;
+            renderStatusFilters();
+            renderTrackFilters();
+            renderTypeFilters();
+            renderWorkbench();
+          };
+          container.appendChild(button);
+        });
+      }
+
+      function renderTypeFilters() {
+        const container = document.getElementById("growth-type-list");
+        const groups = groupedGrowth.filter(
+          (group) => group.statusId === state.status && (!state.track || group.primaryTrackId === state.track)
+        );
+        const mixedCount = groups.filter((group) => group.typeId === "mixed").length;
+        const entries = [
+          { id: "all", label: "全部类型", count: groups.length },
+          ...((growthData.types || []).map((type) => ({
+            id: type.id,
+            label: type.label,
+            count: groups.filter((group) => group.typeId === type.id).length,
+          }))),
+        ];
+        if (mixedCount) {
+          entries.push({
+            id: "mixed",
+            label: "多类型",
+            count: mixedCount,
+          });
+        }
+
+        container.innerHTML = "";
+        entries.forEach((entry) => {
+          const button = document.createElement("button");
+          button.className = "filter-btn" + (state.type === entry.id ? " active" : "");
+          button.textContent = `${entry.label} · ${entry.count}`;
+          button.onclick = () => {
+            state.type = entry.id;
+            const nextItems = getFilteredGroups();
+            state.selectedId = getCurrentSelection(nextItems)?.groupId || null;
+            renderStatusFilters();
+            renderTrackFilters();
+            renderTypeFilters();
+            renderWorkbench();
+          };
+          container.appendChild(button);
+        });
+      }
+
+      function renderGrowthCards(items) {
+        const list = document.getElementById("growth-cards");
+        list.innerHTML = "";
+        items.forEach((group) => {
+          const card = document.createElement("article");
+          card.className = "growth-card" + (group.groupId === state.selectedId ? " active" : "");
+          card.tabIndex = 0;
+          card.innerHTML = `
+            <div class="growth-card-head">
+              <h3>${escapeHtml(group.title)}</h3>
+            </div>
+            <p class="growth-card-summary">${escapeHtml(group.summary || "待补充摘要")}</p>
+            <div class="growth-card-foot">
+              <span class="growth-card-source">${escapeHtml(group.sourceLabel || "待补充来源")}</span>
+              <div class="growth-card-meta-right">
+                <span class="growth-card-date">${escapeHtml(group.date)}</span>
+              </div>
+            </div>
+          `;
+          const select = () => {
+            state.selectedId = group.groupId;
+            renderGrowthCards(items);
+            openGrowthModal(group);
+          };
+          card.addEventListener("click", select);
+          card.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              select();
+            }
+          });
+          list.appendChild(card);
+        });
+      }
+
+      function renderDetail(group, containerId) {
+        const container = document.getElementById(containerId);
+        if (!group) {
+          container.innerHTML = `
+            <div class="growth-detail-empty muted">当前没有可展示的成长详情。</div>
+          `;
+          container.scrollTop = 0;
+          return;
+        }
+
+        const sourceCases = safeList(group.sourceCaseIds);
+        const serial = getGrowthSerial(group.groupId);
+        const recordCode = `GROWTH-${serial}`;
+        const copyReference = `${recordCode} | ${group.primary.id}`;
+        const relatedCases = sourceCases.length ? sourceCases.join("、") : "暂无";
+        const typeLabel = group.typeLabels.length === 1 ? group.typeLabels[0] : `多类型 · ${group.typeLabels.join(" / ")}`;
+        const trackLabel = group.primaryTrackLabel || "待补充主线";
+        const tocItems = [
+          { id: "growth-section-summary", label: "正式确认了什么" },
+          ...group.items.map((item, index) => ({
+            id: `growth-point-${index + 1}`,
+            label: `成长点 ${String(index + 1).padStart(2, "0")}`,
+          })),
+          { id: "growth-section-impact", label: "影响范围与使用方式" },
+          { id: "growth-section-source", label: "来源与关联" },
+        ];
+
+        const pointsMarkup = group.items
+          .map((item, index) => {
+            const pointIndex = String(index + 1).padStart(2, "0");
+            const pointMeta = [
+              buildInlineMetaList("适用场景", safeList(item.appliesTo ? [item.appliesTo] : [])),
+              buildInlineMetaList("影响输出", item.affectedOutputs || []),
+            ]
+              .filter(Boolean)
+              .join("");
+
+            return `
+              <section class="growth-reading-section growth-reading-point" id="growth-point-${index + 1}">
+                <p class="eyebrow">Growth Point ${pointIndex}</p>
+                <h3>成长点 ${pointIndex} · ${escapeHtml(item.title)}</h3>
+                <div class="growth-reading-prose">
+                  ${buildParagraphs([item.growthConfirmed || item.summary || "待补充"])}
+                </div>
+                <div class="growth-reading-subsections">
+                  <section class="growth-reading-block">
+                    <h4>为什么这次成长成立</h4>
+                    <div class="growth-reading-prose">
+                      ${buildParagraphs([item.whyItMatters || "待补充"])}
+                    </div>
+                  </section>
+                  <section class="growth-reading-block">
+                    <h4>相较过去升级了什么</h4>
+                    <div class="growth-reading-prose">
+                      ${buildParagraphs([item.delta || "待补充"])}
+                    </div>
+                  </section>
+                  <section class="growth-reading-block">
+                    <h4>新的判断框架与能力表达</h4>
+                    <div class="growth-reading-prose">
+                      ${buildParagraphs([item.capability || "待补充"])}
+                    </div>
+                  </section>
+                  <section class="growth-reading-block">
+                    <h4>后续遇到类似案例时怎么用</h4>
+                    <div class="growth-reading-prose">
+                      ${buildParagraphs([item.howToUse || "待补充"])}
+                    </div>
+                  </section>
+                  <section class="growth-reading-block">
+                    <h4>使用边界</h4>
+                    <div class="growth-reading-prose">
+                      ${buildParagraphs([item.boundaries || "待补充"])}
+                    </div>
+                  </section>
+                  ${pointMeta ? `<ul class="growth-inline-list growth-reading-inline-list">${pointMeta}</ul>` : ""}
+                </div>
+              </section>
+            `;
+          })
+          .join("");
+
+        container.innerHTML = `
+          <div class="growth-detail-header">
+            <div class="growth-detail-heading">
+              <div class="growth-detail-recordline">
+                <span class="growth-record-chip">${escapeHtml(group.statusLabel)} ${serial}</span>
+                <button class="growth-copy-chip" type="button" data-copy="${copyReference}" title="复制成长记录编号与引用标识">复制编号</button>
+              </div>
+              <h2>${escapeHtml(group.title)}</h2>
+              <p class="growth-detail-summary">${escapeHtml(group.summary || "待补充摘要")}</p>
+            </div>
+            <div class="growth-detail-topmeta">
+              <span class="growth-detail-type">${escapeHtml(group.statusDetail || group.statusLabel)}</span>
+              <span class="growth-detail-type">${escapeHtml(trackLabel)}</span>
+              <span class="growth-detail-type">${escapeHtml(typeLabel)}</span>
+              <span class="growth-detail-date">${escapeHtml(group.date)}</span>
+            </div>
+          </div>
+
+          <div class="growth-reading-frame">
+            <nav class="growth-detail-toc" aria-label="成长详情目录">
+              ${tocItems
+                .map(
+                  (item) => `
+                    <a class="growth-detail-toc-link" href="#${item.id}">${escapeHtml(item.label)}</a>
+                  `
+                )
+                .join("")}
+            </nav>
+
+            <article class="structured-section professional-reading growth-reading-document">
+              <section class="growth-reading-section growth-reading-intro" id="growth-section-summary">
+                <p class="eyebrow">Confirmed Summary</p>
+                <h3>正式确认了什么</h3>
+                <div class="growth-reading-prose">
+                  ${buildParagraphs([
+                    group.primary.detailIntro ||
+                      "这组成长记录已经正式进入 AI 专家能力层，后续展示与调用均以这里的确认结果为准。",
+                    group.primary.detailConclusion || group.primary.growthConfirmed || group.summary || "待补充",
+                  ])}
+                </div>
+              </section>
+
+              ${pointsMarkup}
+
+              <section class="growth-reading-section" id="growth-section-impact">
+                <p class="eyebrow">Impact</p>
+                <h3>影响范围与使用方式</h3>
+                <div class="growth-reading-prose">
+                  ${buildParagraphs([
+                    group.primary.detailImpact ||
+                      `这组成长主要影响：${group.items.map((item) => item.impactScope).filter(Boolean).join("；") || "待补充"}`,
+                    "后续在活动分析、管理层报告、站点判断和策划建议中，系统都应优先沿用这里已经确认过的判断框架，而不是退回到单点规则整理。",
+                  ])}
+                </div>
+              </section>
+
+              <section class="growth-reading-section" id="growth-section-source">
+                <p class="eyebrow">Source</p>
+                <h3>来源与关联</h3>
+                <ul class="growth-inline-list growth-reading-inline-list">
+                  <li><strong>来源训练：</strong>${escapeHtml(group.primary.detailSourceNote || group.sourceLabels.join("、") || "待补充")}</li>
+                  <li><strong>关联案例：</strong>${escapeHtml(relatedCases)}</li>
+                  <li><strong>引用标识：</strong>${escapeHtml(copyReference)}</li>
+                </ul>
+              </section>
+            </article>
+          </div>
+        `;
+        container.scrollTop = 0;
+
+        container.querySelectorAll("[data-copy]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.stopPropagation();
+            copyText(button.getAttribute("data-copy"));
+          });
+        });
+
+        container.querySelectorAll(".growth-detail-toc-link").forEach((link) => {
+          link.addEventListener("click", (event) => {
+            const href = link.getAttribute("href");
+            if (!href || !href.startsWith("#")) return;
+            const target = container.querySelector(href);
+            if (!target) return;
+            event.preventDefault();
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        });
+      }
+
+      function renderWorkbench() {
+        const items = getFilteredGroups();
+        const empty = document.getElementById("growth-empty");
+        const count = document.getElementById("growth-count");
+        count.textContent = `当前显示 ${items.length} 组${state.status === "pending" ? "待确认成长" : "已确认成长"}记录`;
+        if (!items.length) {
+          empty.hidden = false;
+          document.getElementById("growth-cards").innerHTML = "";
+          growthModalDetail.innerHTML = "";
+          closeGrowthModal();
+          return;
+        }
+        empty.hidden = true;
+        const current = getCurrentSelection(items);
+        state.selectedId = current.groupId;
+        renderGrowthCards(items);
+        if (shouldAutoOpenRequested && !hasAutoOpenedRequested) {
+          hasAutoOpenedRequested = true;
+          openGrowthModal(current);
+        }
+      }
+
+      growthReadingModal.addEventListener("click", (event) => {
+        if (
+          event.target.closest("[data-growth-modal-close]") ||
+          !event.target.closest(".reading-modal-dialog")
+        ) {
+          closeGrowthModal();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !growthReadingModal.hidden) {
+          closeGrowthModal();
+        }
+      });
+
+      renderStatusFilters();
+      renderTrackFilters();
+      renderTypeFilters();
+      renderWorkbench();
+    </script>
+  </body>
+</html>

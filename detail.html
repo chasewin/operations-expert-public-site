@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>卡片详情</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="app-sidebar">
+        <div class="sidebar-topbar">
+          <div class="sidebar-brand">
+            <div class="brand-mark">OE</div>
+            <div class="brand-copy">
+              <p class="eyebrow sidebar-eyebrow">Operations Expert</p>
+              <h1>智能活动系统</h1>
+            </div>
+          </div>
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="切换侧边栏">⇤</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <a class="sidebar-nav-item" href="./index.html" title="主页">
+            <span class="nav-label-full">主页</span>
+            <span class="nav-label-short">主</span>
+          </a>
+          <a class="sidebar-nav-item" href="./system.html" title="系统说明">
+            <span class="nav-label-full">系统说明</span>
+            <span class="nav-label-short">系</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./protocol.html" title="工作协议台">
+            <span class="nav-label-full">工作协议台</span>
+            <span class="nav-label-short">协</span>
+          </a>
+          <a class="sidebar-nav-item active" href="./warehouse.html?category=activity" title="数据仓库">
+            <span class="nav-label-full">数据仓库</span>
+            <span class="nav-label-short">库</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./graph.html" title="关系图谱">
+            <span class="nav-label-full">关系图谱</span>
+            <span class="nav-label-short">图</span>
+          </a>
+          <a class="sidebar-nav-item" href="./growth.html" title="AI成长记录">
+            <span class="nav-label-full">AI成长记录</span>
+            <span class="nav-label-short">长</span>
+          </a>
+          <a class="sidebar-nav-item" href="./capabilities.html" title="专家能力 Wiki">
+            <span class="nav-label-full">专家能力 Wiki</span>
+            <span class="nav-label-short">能</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="app-main">
+        <div class="shell detail-shell">
+          <div class="back-link-shell">
+            <a id="back-link" class="back-link top-back-link" href="./warehouse.html">← 返回数据仓库</a>
+          </div>
+
+          <div class="detail-layout">
+            <aside class="detail-toc">
+              <section class="side-section toc-panel">
+                <p class="eyebrow">文档目录</p>
+                <div id="toc-list" class="toc-list"></div>
+              </section>
+            </aside>
+
+            <section class="detail-main">
+              <div class="hero-block">
+                <div class="hero-topbar">
+                  <div id="header-copy"></div>
+                  <a id="detail-graph-link" class="ghost-link graph-entry-link detail-graph-entry" href="./graph.html">关系图谱</a>
+                </div>
+                <div id="hero-tags" class="hero-tags"></div>
+                <p id="hero-summary" class="muted"></p>
+              </div>
+
+              <div id="structured-render" class="structured-render" hidden></div>
+            </section>
+
+            <aside class="detail-side">
+              <section class="side-section">
+                <p class="eyebrow">关联卡片</p>
+                <div id="related-filter-list" class="filter-list horizontal related-filter-list"></div>
+                <div id="related-list" class="related-list"></div>
+              </section>
+            </aside>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="table-modal" class="table-modal" hidden>
+      <div class="table-modal-backdrop" data-table-modal-close></div>
+      <div class="table-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="table-modal-title">
+        <div class="table-modal-header">
+          <div>
+            <p class="eyebrow">Table Viewer</p>
+            <h3 id="table-modal-title">表格放大查看</h3>
+          </div>
+          <div class="table-modal-actions">
+            <button type="button" class="ghost-link graph-mini-action" id="table-modal-copy">复制表格</button>
+            <button type="button" class="table-modal-close" data-table-modal-close aria-label="关闭表格弹窗">×</button>
+          </div>
+        </div>
+        <div id="table-modal-content" class="table-modal-content"></div>
+      </div>
+    </div>
+
+    <script src="./cards-data.js"></script>
+    <script src="./cards-content.js"></script>
+    <script src="./cards-extras.js"></script>
+    <script>
+      const appShell = document.getElementById("app-shell");
+      const sidebarToggle = document.getElementById("sidebar-toggle");
+      const collapsed = localStorage.getItem("lite-sidebar-collapsed") === "true";
+
+      function applySidebarState(value) {
+        appShell.classList.toggle("sidebar-collapsed", value);
+        sidebarToggle.textContent = value ? "⇥" : "⇤";
+      }
+
+      applySidebarState(collapsed);
+      sidebarToggle.addEventListener("click", () => {
+        const next = !appShell.classList.contains("sidebar-collapsed");
+        localStorage.setItem("lite-sidebar-collapsed", String(next));
+        applySidebarState(next);
+      });
+
+      const params = new URLSearchParams(window.location.search);
+      const cardId = params.get("id");
+      const selectedSite = params.get("site") || "all";
+      const card = window.CARD_DATA.cards.find((item) => item.id === cardId);
+
+      if (!card) {
+        document.body.innerHTML = '<div class="shell"><div class="empty">未找到对应卡片。</div></div>';
+      } else {
+        const categoryLabel = window.CARD_DATA.categories.find((c) => c.id === card.category)?.label || card.category;
+        const siteLabel = window.CARD_DATA.sites.find((s) => s.id === selectedSite)?.label || selectedSite;
+
+        document.getElementById("header-copy").innerHTML = `
+          <h1>${card.title}</h1>
+          <p class="muted">${categoryLabel} / ${siteLabel}</p>
+        `;
+        document.getElementById("hero-summary").textContent = card.summary;
+
+        const tags = document.getElementById("hero-tags");
+        tags.innerHTML = card.tags.map((tag) => `<span class="tag">${tag}</span>`).join("");
+
+        function parseRenderSource(source) {
+          if (!source) return null;
+
+          const getBlock = (name) => {
+            const match = source.match(new RegExp(`\\[${name}\\]([\\s\\S]*?)\\[\\/${name}\\]`));
+            return match ? match[1].trim() : "";
+          };
+
+          const summary = getBlock("summary");
+          const insight = getBlock("insight");
+          const risk = getBlock("risk");
+          const restMarkdown = getBlock("rest-markdown");
+
+          const keyFacts = getBlock("key-facts")
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              const [label, ...rest] = line.split(":");
+              return { label: label?.trim(), value: rest.join(":").trim() };
+            })
+            .filter((item) => item.label && item.value);
+
+          const factsTable = getBlock("facts-table")
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              const [label, ...rest] = line.split("|");
+              return { label: label?.trim(), value: rest.join("|").trim() };
+            })
+            .filter((item) => item.label && item.value);
+
+          return { summary, keyFacts, factsTable, insight, risk, restMarkdown };
+        }
+
+        function renderInline(text) {
+          return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/`([^`]+)`/g, "<code>$1</code>");
+        }
+
+        let markdownTableSeq = 0;
+        let activeModalTable = null;
+
+        const tableModal = document.getElementById("table-modal");
+        const tableModalContent = document.getElementById("table-modal-content");
+        const tableModalCopy = document.getElementById("table-modal-copy");
+
+        function buildMarkdownTableHtml(header, bodyRows) {
+          const tableId = `markdown-table-${++markdownTableSeq}`;
+          return `
+            <div class="markdown-table-block" data-table-block="${tableId}">
+              <div class="markdown-table-toolbar">
+                <div class="markdown-table-toolbar-spacer"></div>
+                <div class="markdown-table-toolbar-actions">
+                  <button type="button" class="table-action-btn" data-table-action="expand" data-table-id="${tableId}">放大查看</button>
+                  <button type="button" class="table-action-btn" data-table-action="copy" data-table-id="${tableId}">复制表格</button>
+                </div>
+              </div>
+              <div class="markdown-table-wrap" data-table-wrap="${tableId}">
+                <table class="markdown-table">
+                  <thead>
+                    <tr>${header.map((cell) => `<th>${renderInline(cell)}</th>`).join("")}</tr>
+                  </thead>
+                  <tbody>
+                    ${bodyRows
+                      .map(
+                        (row) => `<tr>${header.map((_, index) => `<td>${renderInline(row[index] || "")}</td>`).join("")}</tr>`
+                      )
+                      .join("")}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }
+
+        function extractTablePayload(table) {
+          if (!table) return { header: [], rows: [] };
+          const header = Array.from(table.querySelectorAll("thead th")).map((cell) => cell.innerText.trim());
+          const rows = Array.from(table.querySelectorAll("tbody tr")).map((row) =>
+            Array.from(row.querySelectorAll("td")).map((cell) => cell.innerText.trim())
+          );
+          return { header, rows };
+        }
+
+        function tablePayloadToTsv(payload) {
+          const lines = [];
+          if (payload.header.length) lines.push(payload.header.join("\t"));
+          payload.rows.forEach((row) => lines.push(row.join("\t")));
+          return lines.join("\n");
+        }
+
+        async function copyTableToClipboard(table) {
+          if (!table) return;
+          const payload = extractTablePayload(table);
+          const text = tablePayloadToTsv(payload);
+          try {
+            if (window.ClipboardItem && navigator.clipboard?.write) {
+              const html = table.outerHTML;
+              const item = new ClipboardItem({
+                "text/plain": new Blob([text], { type: "text/plain" }),
+                "text/html": new Blob([html], { type: "text/html" }),
+              });
+              await navigator.clipboard.write([item]);
+            } else if (navigator.clipboard?.writeText) {
+              await navigator.clipboard.writeText(text);
+            }
+          } catch (error) {
+            console.error("复制表格失败", error);
+          }
+        }
+
+        function closeTableModal() {
+          tableModal.hidden = true;
+          tableModalContent.innerHTML = "";
+          activeModalTable = null;
+          document.body.classList.remove("table-modal-open");
+        }
+
+        function openTableModal(table) {
+          if (!table) return;
+          activeModalTable = table;
+          tableModalContent.innerHTML = "";
+          const wrap = document.createElement("div");
+          wrap.className = "table-modal-table-wrap";
+          wrap.appendChild(table.cloneNode(true));
+          tableModalContent.appendChild(wrap);
+          tableModal.hidden = false;
+          document.body.classList.add("table-modal-open");
+        }
+
+        document.addEventListener("click", (event) => {
+          const actionButton = event.target.closest("[data-table-action]");
+          if (actionButton) {
+            const tableId = actionButton.dataset.tableId;
+            const table = document.querySelector(`[data-table-wrap="${tableId}"] .markdown-table`);
+            if (actionButton.dataset.tableAction === "expand") {
+              openTableModal(table);
+            } else if (actionButton.dataset.tableAction === "copy") {
+              copyTableToClipboard(table);
+            }
+            return;
+          }
+
+          if (event.target.closest("[data-table-modal-close]")) {
+            closeTableModal();
+          }
+        });
+
+        tableModalCopy.addEventListener("click", () => {
+          copyTableToClipboard(activeModalTable || tableModalContent.querySelector(".markdown-table"));
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && !tableModal.hidden) {
+            closeTableModal();
+          }
+        });
+
+        function renderMarkdownBlock(markdown) {
+          if (!markdown) return "";
+
+          const lines = markdown.split("\n");
+          let html = "";
+          let paragraph = [];
+          let listOpen = false;
+          let currentLevel = 0;
+          let tableLines = [];
+
+          const flushParagraph = () => {
+            if (!paragraph.length) return;
+            html += `<p>${renderInline(paragraph.join(" "))}</p>`;
+            paragraph = [];
+          };
+
+          const flushTable = () => {
+            if (!tableLines.length) return;
+            const parsedRows = tableLines
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .map((line) => line.replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim()));
+
+            if (parsedRows.length < 2) {
+              html += `<p>${renderInline(tableLines.join(" "))}</p>`;
+              tableLines = [];
+              return;
+            }
+
+            const header = parsedRows[0];
+            const divider = parsedRows[1];
+            const isDivider = divider.every((cell) => /^:?-{3,}:?$/.test(cell));
+
+            if (!isDivider) {
+              html += `<p>${renderInline(tableLines.join(" "))}</p>`;
+              tableLines = [];
+              return;
+            }
+
+            const bodyRows = parsedRows.slice(2);
+            html += buildMarkdownTableHtml(header, bodyRows);
+            tableLines = [];
+          };
+
+          const closeListsToLevel = (targetLevel = 0) => {
+            while (currentLevel > targetLevel) {
+              html += "</li></ul>";
+              currentLevel -= 1;
+            }
+            if (targetLevel === 0) {
+              listOpen = false;
+            }
+          };
+
+          const closeCurrentItemAtLevel = (level) => {
+            if (listOpen && currentLevel === level) {
+              html += "</li>";
+            }
+          };
+
+          lines.forEach((rawLine) => {
+            const line = rawLine.replace(/\t/g, "  ").replace(/\s+$/, "");
+            const trimmed = line.trim();
+
+            if (!trimmed) {
+              flushTable();
+              flushParagraph();
+              closeListsToLevel(0);
+              return;
+            }
+
+            if (/^\|.*\|$/.test(trimmed)) {
+              flushParagraph();
+              closeListsToLevel(0);
+              tableLines.push(trimmed);
+              return;
+            }
+
+            flushTable();
+
+            if (/^##\s+/.test(trimmed)) {
+              flushParagraph();
+              closeListsToLevel(0);
+              html += `<h2>${renderInline(trimmed.replace(/^##\s+/, ""))}</h2>`;
+              return;
+            }
+
+            if (/^###\s+/.test(trimmed)) {
+              flushParagraph();
+              closeListsToLevel(0);
+              html += `<h3>${renderInline(trimmed.replace(/^###\s+/, ""))}</h3>`;
+              return;
+            }
+
+            if (/^####\s+/.test(trimmed)) {
+              flushParagraph();
+              closeListsToLevel(0);
+              html += `<h4>${renderInline(trimmed.replace(/^####\s+/, ""))}</h4>`;
+              return;
+            }
+
+            const bulletMatch = line.match(/^(\s*)-\s+(.*)$/);
+            if (bulletMatch) {
+              flushParagraph();
+              const indent = bulletMatch[1].length;
+              const level = Math.floor(indent / 2) + 1;
+              const content = bulletMatch[2];
+
+              if (!listOpen) {
+                html += "<ul><li>";
+                currentLevel = 1;
+                listOpen = true;
+                if (level > 1) {
+                  while (currentLevel < level) {
+                    html += "<ul><li>";
+                    currentLevel += 1;
+                  }
+                }
+                html += renderInline(content);
+                return;
+              }
+
+              if (level > currentLevel) {
+                while (currentLevel < level) {
+                  html += "<ul><li>";
+                  currentLevel += 1;
+                }
+                html += renderInline(content);
+                return;
+              }
+
+              if (level === currentLevel) {
+                closeCurrentItemAtLevel(level);
+                html += "<li>" + renderInline(content);
+                return;
+              }
+
+              closeListsToLevel(level);
+              closeCurrentItemAtLevel(level);
+              html += "<li>" + renderInline(content);
+              return;
+            }
+
+            closeListsToLevel(0);
+            paragraph.push(trimmed);
+          });
+
+          flushTable();
+          flushParagraph();
+          closeListsToLevel(0);
+          return html;
+        }
+
+        function extractFromHeading(markdown, heading) {
+          if (!markdown) return "";
+          const lines = markdown.split("\n");
+          let startIndex = -1;
+
+          for (let i = 0; i < lines.length; i += 1) {
+            if (lines[i].trim() === `## ${heading}`) {
+              startIndex = i + 1;
+              break;
+            }
+          }
+
+          if (startIndex === -1) return "";
+          return lines.slice(startIndex).join("\n").trim();
+        }
+
+        function extractSubsection(markdown, headingPattern, stopPattern) {
+          if (!markdown) return "";
+          const lines = markdown.split("\n");
+          let startIndex = -1;
+
+          for (let i = 0; i < lines.length; i += 1) {
+            if (headingPattern.test(lines[i].trim())) {
+              startIndex = i;
+              break;
+            }
+          }
+
+          if (startIndex === -1) return "";
+
+          let endIndex = lines.length;
+          for (let i = startIndex + 1; i < lines.length; i += 1) {
+            const trimmed = lines[i].trim();
+            if (stopPattern.test(trimmed)) {
+              endIndex = i;
+              break;
+            }
+          }
+
+          return lines.slice(startIndex, endIndex).join("\n").trim();
+        }
+
+        function applyHeadingAnchors(scope, prefix) {
+          const headings = Array.from(scope.querySelectorAll("h2, h3"));
+          const used = new Map();
+
+          headings.forEach((heading) => {
+            const base = heading.textContent
+              .trim()
+              .toLowerCase()
+              .replace(/[^\w\u4e00-\u9fa5]+/g, "-")
+              .replace(/^-+|-+$/g, "") || "section";
+            const count = (used.get(base) || 0) + 1;
+            used.set(base, count);
+            heading.id = `${prefix}-${base}${count > 1 ? `-${count}` : ""}`;
+          });
+
+          return headings;
+        }
+
+        function buildToc() {
+          const tocList = document.getElementById("toc-list");
+          const activePanel =
+            document.querySelector(".detail-tab-panel.active") ||
+            document.getElementById("structured-render");
+          const sections = Array.from(activePanel.querySelectorAll("[data-toc-section]"));
+          if (!sections.length) {
+            tocList.innerHTML = '<div class="muted">暂无目录</div>';
+            return;
+          }
+
+          tocList.innerHTML = sections
+            .map((section) => {
+              const title = section.dataset.tocSection;
+              const anchor = section.id;
+              const childLinks = Array.from(section.querySelectorAll("h2, h3"))
+                .map(
+                  (heading) => `
+                    <a class="toc-subitem toc-level-${heading.tagName.toLowerCase()}" href="#${heading.id}">
+                      ${heading.textContent}
+                    </a>
+                  `
+                )
+                .join("");
+
+              return `
+                <div class="toc-group">
+                  <a class="toc-item toc-top" href="#${anchor}">${title}</a>
+                  ${childLinks}
+                </div>
+              `;
+            })
+            .join("");
+        }
+
+        function extractSection(markdown, heading) {
+          const lines = markdown.split("\n");
+          let startIndex = -1;
+
+          for (let i = 0; i < lines.length; i += 1) {
+            if (lines[i].trim() === `## ${heading}`) {
+              startIndex = i + 1;
+              break;
+            }
+          }
+
+          if (startIndex === -1) return "";
+
+          let endIndex = lines.length;
+          for (let i = startIndex; i < lines.length; i += 1) {
+            if (/^##\s+/.test(lines[i])) {
+              endIndex = i;
+              break;
+            }
+          }
+
+          return lines.slice(startIndex, endIndex).join("\n").trim();
+        }
+
+        function extractSectionUntil(markdown, heading, stopPatterns = []) {
+          const lines = markdown.split("\n");
+          let startIndex = -1;
+
+          for (let i = 0; i < lines.length; i += 1) {
+            if (lines[i].trim() === `## ${heading}`) {
+              startIndex = i + 1;
+              break;
+            }
+          }
+
+          if (startIndex === -1) return "";
+
+          let endIndex = lines.length;
+          for (let i = startIndex; i < lines.length; i += 1) {
+            const trimmed = lines[i].trim();
+            if (/^##\s+/.test(trimmed)) {
+              endIndex = i;
+              break;
+            }
+            if (stopPatterns.some((pattern) => pattern.test(trimmed))) {
+              endIndex = i;
+              break;
+            }
+          }
+
+          return lines.slice(startIndex, endIndex).join("\n").trim();
+        }
+
+        function stripTitleAndMeta(markdown) {
+          if (!markdown) return "";
+          const lines = markdown.split("\n");
+          let index = 0;
+
+          if (lines[index]?.startsWith("# ")) index += 1;
+
+          while (index < lines.length && !lines[index].trim()) index += 1;
+
+          if (lines[index]?.trim() === "## 卡片元信息") {
+            index += 1;
+            while (index < lines.length) {
+              if (/^##\s+/.test(lines[index]) && lines[index].trim() !== "## 卡片元信息") break;
+              index += 1;
+            }
+          }
+
+          return lines.slice(index).join("\n").trim();
+        }
+
+        function createSyntheticOverview(card) {
+          const parts = [
+            "## 分析概要",
+            `- 这张卡主要讲的是：${card.subtitle || card.title}`,
+            `- 当前核心结论：${card.summary || "暂无摘要"}`,
+          ];
+
+          if (card.tags?.length) {
+            parts.push(`- 值得关注的关键词：${card.tags.join(" / ")}`);
+          }
+
+          return parts.join("\n");
+        }
+
+        function collectSubsections(markdown, sectionPatterns = []) {
+          if (!markdown) return "";
+          const pieces = sectionPatterns
+            .map(({ start, stop }) => extractSubsection(markdown, start, stop))
+            .filter(Boolean);
+          return pieces.join("\n\n").trim();
+        }
+
+        function collectSubsectionPieces(markdown, sectionPatterns = []) {
+          if (!markdown) return [];
+          return sectionPatterns
+            .map(({ start, stop }) => extractSubsection(markdown, start, stop))
+            .filter(Boolean);
+        }
+
+        function collectTopLevelSections(markdown, headings = []) {
+          if (!markdown || !headings.length) return "";
+          const pieces = headings
+            .map((heading) => {
+              const section = extractSection(markdown, heading);
+              return section ? `## ${heading}\n\n${section}` : "";
+            })
+            .filter(Boolean);
+          return pieces.join("\n\n").trim();
+        }
+
+        function stripTopLevelSections(markdown, headings = []) {
+          if (!markdown || !headings.length) return markdown;
+          const blocked = new Set(headings);
+          const lines = markdown.split("\n");
+          const kept = [];
+          let skipping = false;
+
+          for (const line of lines) {
+            const match = line.match(/^##\s+(.+)$/);
+            if (match) {
+              const heading = match[1].trim();
+              skipping = blocked.has(heading);
+              if (!skipping) {
+                kept.push(line);
+              }
+              continue;
+            }
+
+            if (!skipping) {
+              kept.push(line);
+            }
+          }
+
+          return kept.join("\n").trim();
+        }
+
+        function parseGenericMarkdown(card, markdown) {
+          const cleaned = stripTitleAndMeta(markdown);
+          const overview = extractSection(cleaned, "分析概要");
+          const managementReport = extractSection(cleaned, "活动级管理层小报告") || extractSection(cleaned, "管理层小报告");
+          const managementView = extractSection(cleaned, "管理视图");
+          const professionalView = extractFromHeading(cleaned, "专业视图");
+          const siteProfessionalView = extractFromHeading(cleaned, "专业视图");
+          const problemOverview = collectTopLevelSections(cleaned, ["问题定义", "典型场景与信号"]);
+          const problemProfessionalFallback = stripTopLevelSections(cleaned, ["问题定义", "典型场景与信号"]);
+          const methodOverview = collectTopLevelSections(cleaned, ["方法定义", "适用问题", "适用对象与场景"]);
+          const methodProfessionalFallback = stripTopLevelSections(cleaned, ["方法定义", "适用问题", "适用对象与场景"]);
+
+          const activityFactsOnly = professionalView
+            ? extractSubsection(professionalView, /^###\s*2\.\s*事实拆解$/, /^###\s*3\./)
+            : "";
+          const activityDetail = activityFactsOnly || "";
+
+          let management = "";
+          if (managementReport) {
+            const quickSnapshot =
+              extractSection(managementView, "### 关键信息快照") ||
+              extractSection(managementView, "### 核心结论");
+            management = managementReport;
+            if (quickSnapshot) {
+              management += `\n\n## 关键信息快照\n\n${quickSnapshot}`;
+            }
+          } else if (card.category === "problem" && problemOverview) {
+            management = problemOverview;
+          } else if (card.category === "method" && methodOverview) {
+            management = methodOverview;
+          } else if (overview) {
+            management = overview;
+          } else if (managementView) {
+            management = extractSection(managementView, "### 管理摘要") || managementView;
+          } else {
+            management = createSyntheticOverview(card);
+          }
+
+          let professional = "";
+          if (professionalView) {
+            const professionalPatterns = [
+              { start: /^###\s*1\.\s*业务目标、方法与形式判断$/, stop: /^###\s*2\./ },
+              { start: /^###\s*2\.\s*返利测算、强度与吸引力分析$/, stop: /^###\s*3\./ },
+              { start: /^###\s*3\.\s*成本与风险判断$/, stop: /^###\s*4\./ },
+              { start: /^###\s*4\.\s*专家评价与启发$/, stop: /^###\s*5\./ },
+              { start: /^###\s*5\.\s*后续观察与管理判断$/, stop: /^##\s+/ },
+              { start: /^###\s*3\.\s*问题-方法-形式判断$/, stop: /^###\s*4\./ },
+              { start: /^###\s*4\.\s*强度与吸引力分析$/, stop: /^###\s*5\./ },
+              { start: /^###\s*5\.\s*专家解读$/, stop: /^###\s*6\./ },
+              { start: /^###\s*6\.\s*战略层判断$/, stop: /^##\s+/ },
+            ];
+            const professionalPieces = collectSubsectionPieces(professionalView, professionalPatterns);
+            const professionalHeadingCount = [...professionalView.matchAll(/^###\s+.+$/gm)].length;
+            const parsedProfessional = professionalPieces.join("\n\n").trim();
+
+            professional =
+              professionalHeadingCount > 0 && professionalPieces.length > 0 && professionalPieces.length < professionalHeadingCount
+                ? professionalView
+                : parsedProfessional;
+          }
+          if (!professional) {
+            professional = professionalView || "";
+          }
+          if (!professional && card.category === "problem") {
+            professional = problemProfessionalFallback;
+          }
+          if (!professional && card.category === "method") {
+            professional = methodProfessionalFallback;
+          }
+          professional = stripTopLevelSections(professional, [
+            "活动详情文档",
+            "活动详情",
+            "关联关系",
+            "备注",
+            "活动策划学习沉淀",
+          ]);
+
+          return { management, professional, activityDetail, siteProfessionalView };
+        }
+
+        function buildSection(id, title, eyebrow, content) {
+          if (!content) return "";
+          return `
+            <section class="structured-section reading-section" id="${id}" data-toc-section="${title}">
+              <p class="eyebrow">${eyebrow}</p>
+              <h3>${title}</h3>
+              <div class="structured-markdown">${renderMarkdownBlock(content)}</div>
+            </section>
+          `;
+        }
+
+        function renderTabbedSections(tabs, defaultId) {
+          const container = document.getElementById("structured-render");
+          const visibleTabs = tabs.filter((tab) => tab.content);
+          if (!visibleTabs.length) {
+            container.hidden = true;
+            buildToc();
+            return;
+          }
+
+          const initialTab = visibleTabs.find((tab) => tab.id === defaultId)?.id || visibleTabs[0].id;
+
+          container.hidden = false;
+          container.innerHTML = `
+            <div class="detail-tabs" id="detail-tabs">
+              ${visibleTabs
+                .map(
+                  (tab) => `
+                    <button class="detail-tab ${tab.id === initialTab ? "active" : ""}" data-detail-tab="${tab.id}">
+                      ${tab.label}
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+            <div class="detail-tab-panels">
+              ${visibleTabs
+                .map(
+                  (tab) => `
+                    <div class="detail-tab-panel ${tab.id === initialTab ? "active" : ""}" data-detail-panel="${tab.id}">
+                      ${tab.content}
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+          `;
+
+          const ensureAnchors = (tabId) => {
+            const activePanel = container.querySelector(`[data-detail-panel="${tabId}"]`);
+            if (!activePanel || activePanel.dataset.anchorsReady === "true") return;
+            applyHeadingAnchors(activePanel, tabId);
+            activePanel.dataset.anchorsReady = "true";
+          };
+
+          const activateTab = (tabId) => {
+            container.querySelectorAll("[data-detail-tab]").forEach((button) => {
+              button.classList.toggle("active", button.dataset.detailTab === tabId);
+            });
+            container.querySelectorAll("[data-detail-panel]").forEach((panel) => {
+              panel.classList.toggle("active", panel.dataset.detailPanel === tabId);
+            });
+            ensureAnchors(tabId);
+            buildToc();
+          };
+
+          container.querySelectorAll("[data-detail-tab]").forEach((button) => {
+            button.onclick = () => activateTab(button.dataset.detailTab);
+          });
+
+          ensureAnchors(initialTab);
+          buildToc();
+        }
+
+        function renderStructuredArticle(blocks) {
+          const container = document.getElementById("structured-render");
+          if (!blocks || (!blocks.summary && !blocks.keyFacts.length && !blocks.factsTable.length && !blocks.insight && !blocks.risk && !blocks.restMarkdown)) {
+            container.hidden = true;
+            return;
+          }
+
+          const parsedFullContent = parseGenericMarkdown(card, window.CARD_CONTENT?.[card.id] || "");
+          const management = parsedFullContent.management;
+          const professional = parsedFullContent.professional;
+          const activityDetail =
+            window.CARD_EXTRAS?.activityDetailDocs?.[card.id] || parsedFullContent.activityDetail;
+
+          const managementContent = `
+            <section class="structured-section reading-section management-reading" id="section-management" data-toc-section="分析概要">
+              <p class="eyebrow">Overview</p>
+              <h3>分析概要</h3>
+              ${!management && blocks.summary ? `<div class="structured-summary">${blocks.summary}</div>` : ""}
+              ${
+                !management && blocks.keyFacts.length
+                  ? `<div class="key-facts-grid">
+                      ${blocks.keyFacts
+                        .map(
+                          (item) => `
+                            <div class="key-fact-card">
+                              <span>${item.label}</span>
+                              <strong>${item.value}</strong>
+                            </div>
+                          `
+                        )
+                        .join("")}
+                    </div>`
+                  : ""
+              }
+              ${
+                management
+                  ? `<section class="inline-reading-block management-markdown">
+                      <div class="structured-markdown">${renderMarkdownBlock(management)}</div>
+                    </section>`
+                  : ""
+              }
+            </section>
+          `;
+
+          const professionalContent = `
+            <section class="structured-section reading-section professional-reading" id="section-professional" data-toc-section="活动分析">
+              <p class="eyebrow">Activity Analysis</p>
+              <h3>活动分析</h3>
+              ${
+                !professional && blocks.insight
+                  ? `<section class="inline-reading-block">
+                      <p class="eyebrow">Insight</p>
+                      <h4>亮点与判断</h4>
+                      <div class="structured-prose">${blocks.insight
+                        .split("\n\n")
+                        .map((paragraph) => `<p>${paragraph.trim()}</p>`)
+                        .join("")}</div>
+                    </section>`
+                  : ""
+              }
+              ${
+                !professional && blocks.factsTable.length
+                  ? `<section class="inline-reading-block">
+                      <p class="eyebrow">Auxiliary Facts</p>
+                      <h4>关键事实（辅助）</h4>
+                    <div class="facts-table">
+                      ${blocks.factsTable
+                        .map(
+                          (item) => `
+                            <div class="facts-row">
+                              <div class="facts-label">${item.label}</div>
+                              <div class="facts-value">${item.value}</div>
+                            </div>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                  </section>`
+                  : ""
+              }
+              ${
+                professional
+                  ? `<section class="inline-reading-block structured-markdown-section">
+                      <div class="structured-markdown">${renderMarkdownBlock(professional)}</div>
+                    </section>`
+                  : ""
+              }
+              ${
+                !professional && blocks.risk
+                  ? `<section class="inline-reading-block risk-reading-block">
+                      <p class="eyebrow">Risk</p>
+                      <h4>风险与边界</h4>
+                      <div class="structured-risk">${blocks.risk}</div>
+                    </section>`
+                  : ""
+              }
+            </section>
+          `;
+
+          const activityDetailContent = activityDetail
+            ? buildSection("section-activity-detail", "活动详情", "Activity Detail", activityDetail)
+            : "";
+
+          renderTabbedSections(
+            [
+              { id: "overview", label: "分析概要", content: managementContent },
+              { id: "professional", label: "活动分析", content: professionalContent },
+              { id: "activity-detail", label: "活动详情", content: activityDetailContent },
+            ],
+            "professional"
+          );
+        }
+
+        function renderGenericArticle(card, markdown) {
+          const container = document.getElementById("structured-render");
+          if (!markdown) {
+            container.hidden = true;
+            buildToc();
+            return;
+          }
+
+          const { management, professional, activityDetail: fallbackActivityDetail } = parseGenericMarkdown(card, markdown);
+          const activityDetail =
+            window.CARD_EXTRAS?.activityDetailDocs?.[card.id] || fallbackActivityDetail;
+
+          if (card.category === "activity") {
+            renderTabbedSections(
+              [
+                { id: "overview", label: "分析概要", content: buildSection("section-management", "分析概要", "Overview", management) },
+                { id: "professional", label: "活动分析", content: buildSection("section-professional", "活动分析", "Activity Analysis", professional) },
+                { id: "activity-detail", label: "活动详情", content: buildSection("section-activity-detail", "活动详情", "Activity Detail", activityDetail || "") },
+              ],
+              "professional"
+            );
+            return;
+          }
+
+          if (card.category === "site") {
+            const siteDocs = window.CARD_EXTRAS?.siteDocs?.[card.site] || {};
+            renderTabbedSections(
+              [
+                { id: "site-strategy", label: "站点画像", content: buildSection("section-site-strategy", "站点画像", "Site Strategy", markdown) },
+                { id: "site-report", label: "管理层报告", content: buildSection("section-site-report", "管理层报告", "Management Report", siteDocs.management || "") },
+                { id: "site-timeline", label: "动态时间线", content: buildSection("section-site-timeline", "动态时间线", "Timeline", siteDocs.timeline || "") },
+                { id: "site-background", label: "背景文档", content: buildSection("section-site-background", "背景文档", "Background", siteDocs.background || "") },
+              ],
+              "site-strategy"
+            );
+            return;
+          }
+
+          renderTabbedSections(
+            [
+              { id: "overview", label: "分析概要", content: buildSection("section-management", "分析概要", "Overview", management) },
+              { id: "professional", label: "活动分析", content: buildSection("section-professional", "活动分析", "Activity Analysis", professional) },
+            ],
+            "professional"
+          );
+        }
+
+        const contentSource = window.CARD_CONTENT?.[card.id] || "";
+        if (card.renderSource) {
+          renderStructuredArticle(parseRenderSource(card.renderSource));
+        } else {
+          renderGenericArticle(card, contentSource);
+        }
+
+        const relatedCards = window.CARD_DATA.cards
+          .filter((item) => item.id !== card.id)
+          .map((item) => {
+            const sameSite =
+              card.site !== "all" &&
+              (item.site === card.site || (Array.isArray(item.sites) && item.sites.includes(card.site)));
+            const sameTagCount = item.tags.filter((tag) => card.tags.includes(tag)).length;
+            const sameCategory = item.category === card.category;
+            const score = (sameSite ? 3 : 0) + sameTagCount * 2 + (sameCategory ? 1 : 0);
+            return { item, score };
+          })
+          .filter(({ score }) => score > 0)
+          .sort((a, b) => b.score - a.score)
+          .map(({ item }) => item);
+
+        const relatedCategories = [
+          { id: "all", label: "全部" },
+          ...window.CARD_DATA.categories
+            .filter((category) => category.id !== card.category)
+            .map((category) => ({ id: category.id, label: category.label })),
+        ];
+        let relatedCategory = "all";
+
+        const relatedFilterList = document.getElementById("related-filter-list");
+        const relatedList = document.getElementById("related-list");
+
+        function renderRelatedFilters() {
+          relatedFilterList.innerHTML = relatedCategories
+            .map(
+              (category) => `
+                <button class="filter-btn ${relatedCategory === category.id ? "active" : ""}" data-related-category="${category.id}">
+                  ${category.label}
+                </button>
+              `
+            )
+            .join("");
+
+          relatedFilterList.querySelectorAll("[data-related-category]").forEach((button) => {
+            button.onclick = () => {
+              relatedCategory = button.dataset.relatedCategory;
+              renderRelatedFilters();
+              renderRelatedCards();
+            };
+          });
+        }
+
+        function renderRelatedCards() {
+          const visibleCards = relatedCards
+            .filter((item) => relatedCategory === "all" || item.category === relatedCategory)
+            .slice(0, 5);
+
+          if (!visibleCards.length) {
+            relatedList.innerHTML = '<div class="muted">当前筛选下还没有关联卡片。</div>';
+            return;
+          }
+
+          relatedList.innerHTML = visibleCards
+            .map((item) => {
+              const itemCategoryLabel =
+                window.CARD_DATA.categories.find((c) => c.id === item.category)?.label || item.category;
+              return `
+                <a class="related-card-link" href="./detail.html?category=${encodeURIComponent(item.category)}&site=${encodeURIComponent(item.site === "all" ? selectedSite : item.site)}&id=${encodeURIComponent(item.id)}">
+                  <strong>${item.title}</strong>
+                  <span>${itemCategoryLabel} / ${item.site === "all" ? "跨站点" : item.site}</span>
+                </a>
+              `;
+            })
+            .join("");
+        }
+
+        renderRelatedFilters();
+        renderRelatedCards();
+
+        document.getElementById("back-link").href = `./warehouse.html?category=${encodeURIComponent(card.category)}&site=${encodeURIComponent(selectedSite)}`;
+        document.getElementById("detail-graph-link").href = `./graph.html?category=${encodeURIComponent(
+          card.category
+        )}&site=${encodeURIComponent(selectedSite)}&focus=${encodeURIComponent(card.id)}&returnTo=${encodeURIComponent(
+          `./detail.html?category=${card.category}&site=${selectedSite}&id=${card.id}`
+        )}`;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>专家能力 Wiki</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="app-sidebar">
+        <div class="sidebar-topbar">
+          <div class="sidebar-brand">
+            <div class="brand-mark">OE</div>
+            <div class="brand-copy">
+              <p class="eyebrow sidebar-eyebrow">Operations Expert</p>
+              <h1>智能活动系统</h1>
+            </div>
+          </div>
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="切换侧边栏">⇤</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <a class="sidebar-nav-item" href="./index.html" title="主页">
+            <span class="nav-label-full">主页</span>
+            <span class="nav-label-short">主</span>
+          </a>
+          <a class="sidebar-nav-item" href="./system.html" title="系统说明">
+            <span class="nav-label-full">系统说明</span>
+            <span class="nav-label-short">系</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./protocol.html" title="工作协议台">
+            <span class="nav-label-full">工作协议台</span>
+            <span class="nav-label-short">协</span>
+          </a>
+          <a class="sidebar-nav-item" href="./warehouse.html?category=activity" title="数据仓库">
+            <span class="nav-label-full">数据仓库</span>
+            <span class="nav-label-short">库</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./graph.html" title="关系图谱">
+            <span class="nav-label-full">关系图谱</span>
+            <span class="nav-label-short">图</span>
+          </a>
+          <a class="sidebar-nav-item" href="./growth.html" title="AI成长记录">
+            <span class="nav-label-full">AI成长记录</span>
+            <span class="nav-label-short">长</span>
+          </a>
+          <a class="sidebar-nav-item active" href="./capabilities.html" title="专家能力 Wiki">
+            <span class="nav-label-full">专家能力 Wiki</span>
+            <span class="nav-label-short">能</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="app-main">
+        <div class="shell growth-shell-v2">
+          <div class="page-titlebar capability-titlebar">
+            <div>
+              <p class="eyebrow">Expert Capability Wiki</p>
+              <h1>专家能力 Wiki</h1>
+            </div>
+            <a class="primary-pill" href="./growth.html">返回成长记录</a>
+          </div>
+
+          <section class="growth-summary-panel">
+            <div class="growth-filter-row">
+              <div id="capability-track-list" class="filter-list horizontal"></div>
+            </div>
+            <div class="growth-filter-row">
+              <div id="capability-domain-list" class="filter-list horizontal"></div>
+              <div class="muted tiny" id="capability-count"></div>
+            </div>
+          </section>
+
+          <section class="growth-workbench capability-workbench">
+            <div class="growth-cards-panel">
+              <div id="capability-cards" class="growth-cards-grid capability-cards-grid"></div>
+              <div id="capability-empty" class="empty growth-empty" hidden>当前筛选条件下没有能力对象。</div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <div id="capability-reading-modal" class="reading-modal" hidden>
+      <div class="reading-modal-backdrop" data-capability-modal-close></div>
+      <div
+        class="reading-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="capability-reading-modal-title"
+      >
+        <div class="reading-modal-header">
+          <div>
+            <p class="eyebrow">Capability Reading</p>
+            <h3 id="capability-reading-modal-title">能力详情</h3>
+          </div>
+          <button
+            type="button"
+            class="reading-modal-close"
+            data-capability-modal-close
+            aria-label="关闭能力详情弹窗"
+          >
+            ×
+          </button>
+        </div>
+        <div id="capability-modal-detail" class="reading-modal-content"></div>
+      </div>
+    </div>
+
+    <script src="./capability-data.js"></script>
+    <script>
+      const appShell = document.getElementById("app-shell");
+      const sidebarToggle = document.getElementById("sidebar-toggle");
+      const collapsed = localStorage.getItem("lite-sidebar-collapsed") === "true";
+
+      function applySidebarState(value) {
+        appShell.classList.toggle("sidebar-collapsed", value);
+        sidebarToggle.textContent = value ? "⇥" : "⇤";
+      }
+
+      applySidebarState(collapsed);
+      sidebarToggle.addEventListener("click", () => {
+        const next = !appShell.classList.contains("sidebar-collapsed");
+        localStorage.setItem("lite-sidebar-collapsed", String(next));
+        applySidebarState(next);
+      });
+
+      const capabilityData = window.CAPABILITY_DATA || { items: [], domains: [], tracks: [] };
+      const params = new URLSearchParams(window.location.search);
+      const requestedId = params.get("id");
+      const requestedItem = (capabilityData.items || []).find((item) => item.id === requestedId);
+      const defaultTrackId =
+        (requestedItem && safeList(requestedItem.trackIds)[0]) ||
+        (capabilityData.tracks && capabilityData.tracks[0] && capabilityData.tracks[0].id) ||
+        null;
+      const state = {
+        track: defaultTrackId,
+        domain: "all",
+        selectedId: requestedId || (capabilityData.items[0] && capabilityData.items[0].id) || null,
+      };
+      const shouldAutoOpenRequested = Boolean(requestedItem);
+      let hasAutoOpenedRequested = false;
+      const capabilityReadingModal = document.getElementById("capability-reading-modal");
+      const capabilityModalDetail = document.getElementById("capability-modal-detail");
+
+      function safeList(items) {
+        return (items || []).filter(Boolean);
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function buildParagraphs(values) {
+        return safeList(values)
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
+          .map((value) => `<p>${escapeHtml(value)}</p>`)
+          .join("");
+      }
+
+      function buildUniqueParagraphs(values) {
+        return buildParagraphs([...new Set(safeList(values))]);
+      }
+
+      function getCapabilityCardSummary(item) {
+        if (state.track === "activity-planning") {
+          return item.problem || item.planningUse || item.standardUse || item.oneLineConclusion || "待补充";
+        }
+        return item.oneLineConclusion || item.analysisUse || item.problem || "待补充";
+      }
+
+      function getCapabilityDetailSummary(item) {
+        if (state.track === "activity-planning") {
+          return item.problem || item.planningUse || item.oneLineConclusion || "待补充";
+        }
+        return item.oneLineConclusion || item.problem || "待补充";
+      }
+
+      function openCapabilityModal(item) {
+        renderDetail(item, "capability-modal-detail");
+        capabilityReadingModal.hidden = false;
+        document.body.classList.add("reading-modal-open");
+      }
+
+      function closeCapabilityModal() {
+        capabilityReadingModal.hidden = true;
+        document.body.classList.remove("reading-modal-open");
+      }
+
+      function getFilteredItems() {
+        return (capabilityData.items || []).filter((item) => {
+          const trackMatch = !state.track || safeList(item.trackIds).includes(state.track);
+          const domainMatch = state.domain === "all" || item.domain === state.domain;
+          return trackMatch && domainMatch;
+        });
+      }
+
+      function getCurrent(items) {
+        return items.find((item) => item.id === state.selectedId) || items[0] || null;
+      }
+
+      function renderTrackFilters() {
+        const container = document.getElementById("capability-track-list");
+        const entries = (capabilityData.tracks || []).map((track) => ({
+          id: track.id,
+          label: track.label,
+          count: track.count,
+        }));
+
+        container.innerHTML = "";
+        entries.forEach((entry) => {
+          const button = document.createElement("button");
+          button.className = "filter-btn" + (state.track === entry.id ? " active" : "");
+          button.textContent = `${entry.label} · ${entry.count}`;
+          button.onclick = () => {
+            state.track = entry.id;
+            state.domain = "all";
+            const nextItems = getFilteredItems();
+            state.selectedId = getCurrent(nextItems)?.id || null;
+            renderTrackFilters();
+            renderFilters();
+            renderWorkbench();
+          };
+          container.appendChild(button);
+        });
+      }
+
+      function renderFilters() {
+        const container = document.getElementById("capability-domain-list");
+        const allItems = (capabilityData.items || []).filter(
+          (item) => !state.track || safeList(item.trackIds).includes(state.track)
+        );
+        const domainCounts = new Map();
+        allItems.forEach((item) => {
+          const key = item.domain;
+          domainCounts.set(key, (domainCounts.get(key) || 0) + 1);
+        });
+        const entries = [
+          { id: "all", label: "全部能力", count: allItems.length },
+          ...((capabilityData.domains || []).map((domain) => ({
+            id: domain.id,
+            label: domain.label,
+            count: domainCounts.get(domain.id) || 0,
+          }))),
+        ];
+
+        container.innerHTML = "";
+        entries.forEach((entry) => {
+          const button = document.createElement("button");
+          button.className = "filter-btn" + (state.domain === entry.id ? " active" : "");
+          button.textContent = `${entry.label} · ${entry.count}`;
+          button.onclick = () => {
+            state.domain = entry.id;
+            const nextItems = getFilteredItems();
+            state.selectedId = getCurrent(nextItems)?.id || null;
+            renderTrackFilters();
+            renderFilters();
+            renderWorkbench();
+          };
+          container.appendChild(button);
+        });
+      }
+
+      function renderCards(items) {
+        const list = document.getElementById("capability-cards");
+        list.innerHTML = "";
+        items.forEach((item) => {
+          const card = document.createElement("article");
+          card.className = "growth-card capability-card" + (item.id === state.selectedId ? " active" : "");
+          card.tabIndex = 0;
+          card.innerHTML = `
+            <div class="growth-card-head">
+              <h3>${escapeHtml(item.title)}</h3>
+            </div>
+            <p class="growth-card-summary">${escapeHtml(getCapabilityCardSummary(item))}</p>
+            <div class="growth-card-foot">
+              <span class="growth-card-source">${escapeHtml(item.createdDate || "未知时间")}</span>
+              <div class="growth-card-meta-right">
+                <span class="capability-card-meta">${escapeHtml(item.stability || "未知")}</span>
+              </div>
+            </div>
+          `;
+          const select = () => {
+            state.selectedId = item.id;
+            renderCards(items);
+            openCapabilityModal(item);
+          };
+          card.addEventListener("click", select);
+          card.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              select();
+            }
+          });
+          list.appendChild(card);
+        });
+      }
+
+      function renderDetail(item, containerId) {
+        const container = document.getElementById(containerId);
+        if (!item) {
+          container.innerHTML = `<div class="growth-detail-empty muted">当前没有可展示的能力详情。</div>`;
+          container.scrollTop = 0;
+          return;
+        }
+
+        const summaryTitle = state.track === "activity-planning" ? "策划主线下怎么用" : "一句话定义";
+        const summaryEyebrow = state.track === "activity-planning" ? "Planning Focus" : "Capability Summary";
+        const standardUseParagraphs =
+          state.track === "activity-planning"
+            ? [item.planningUse, item.standardUse, item.openingReminder]
+            : [item.analysisUse, item.standardUse, item.openingReminder];
+
+        container.innerHTML = `
+          <div class="growth-detail-header">
+            <div class="growth-detail-heading">
+              <div class="growth-detail-recordline">
+                <span class="growth-record-chip">能力对象</span>
+              </div>
+              <h2>${escapeHtml(item.title)}</h2>
+              <p class="growth-detail-summary">${escapeHtml(getCapabilityDetailSummary(item))}</p>
+            </div>
+            <div class="growth-detail-topmeta">
+              <span class="growth-detail-type">${escapeHtml(safeList(item.trackTags).join(" / ") || "待补充主线")}</span>
+              <span class="growth-detail-type">${escapeHtml(item.domain)}</span>
+              <span class="growth-detail-type">${escapeHtml(item.createdDate || "未知时间")}</span>
+              <span class="growth-detail-date">${escapeHtml(item.status || "试运行")}</span>
+            </div>
+          </div>
+
+          <div class="growth-reading-frame">
+            <article class="structured-section professional-reading growth-reading-document">
+              <section class="growth-reading-section growth-reading-intro">
+                <p class="eyebrow">${escapeHtml(summaryEyebrow)}</p>
+                <h3>${escapeHtml(summaryTitle)}</h3>
+                <div class="growth-reading-prose">
+                  ${buildUniqueParagraphs(
+                    state.track === "activity-planning"
+                      ? [item.problem, item.planningUse, item.oneLineConclusion]
+                      : [item.oneLineConclusion, item.problem]
+                  )}
+                </div>
+              </section>
+
+              <section class="growth-reading-section">
+                <p class="eyebrow">Standard Use</p>
+                <h3>标准调用说明</h3>
+                <div class="growth-reading-prose">
+                  ${buildUniqueParagraphs(standardUseParagraphs)}
+                </div>
+                <ul class="growth-inline-list growth-reading-inline-list">
+                  <li><strong>推荐调用任务：</strong>${escapeHtml(safeList(item.recommendedTasks).join("、") || "待补充")}</li>
+                  <li><strong>推荐影响输出层：</strong>${escapeHtml(safeList(item.recommendedOutputs).join("、") || "待补充")}</li>
+                  <li><strong>是否进入启动卡：</strong>${escapeHtml(item.startupCard || "否")}</li>
+                </ul>
+              </section>
+
+              <section class="growth-reading-section">
+                <p class="eyebrow">Boundary</p>
+                <h3>适用边界</h3>
+                <div class="growth-reading-prose">
+                  ${buildParagraphs([item.appliesTo, item.notApplicable, item.cautionBoundary, item.commonMisjudge])}
+                </div>
+              </section>
+
+              <section class="growth-reading-section">
+                <p class="eyebrow">Source</p>
+                <h3>来源与维护</h3>
+                <div class="growth-reading-prose">
+                  ${buildParagraphs([item.whyWorth, item.calibrationNeeds, item.fallback])}
+                </div>
+                <ul class="growth-inline-list growth-reading-inline-list">
+                  <li><strong>来源成长卡：</strong>${escapeHtml(safeList(item.sourceGrowthCards).join("、") || "待补充")}</li>
+                  <li><strong>代表性案例：</strong>${escapeHtml(safeList(item.representativeCases).join("、") || "待补充")}</li>
+                  <li><strong>问题卡：</strong>${escapeHtml(safeList(item.questionCards).join("、") || "无")}</li>
+                  <li><strong>方法卡：</strong>${escapeHtml(safeList(item.methodCards).join("、") || "无")}</li>
+                  <li><strong>站点策略卡：</strong>${escapeHtml(safeList(item.siteStrategyCards).join("、") || "无")}</li>
+                  <li><strong>外部模型可读性：</strong>${escapeHtml(item.externalModelReady || "待补充")}</li>
+                  <li><strong>源文件：</strong><a href="${escapeHtml(item.filePath)}">${escapeHtml(item.fileName)}</a></li>
+                </ul>
+              </section>
+            </article>
+          </div>
+        `;
+        container.scrollTop = 0;
+      }
+
+      function renderWorkbench() {
+        const items = getFilteredItems();
+        const empty = document.getElementById("capability-empty");
+        const count = document.getElementById("capability-count");
+        count.textContent = `当前显示 ${items.length} 个能力对象`;
+        if (!items.length) {
+          empty.hidden = false;
+          document.getElementById("capability-cards").innerHTML = "";
+          capabilityModalDetail.innerHTML = "";
+          closeCapabilityModal();
+          return;
+        }
+        empty.hidden = true;
+        const current = getCurrent(items);
+        state.selectedId = current.id;
+        renderCards(items);
+        if (shouldAutoOpenRequested && !hasAutoOpenedRequested) {
+          hasAutoOpenedRequested = true;
+          openCapabilityModal(current);
+        }
+      }
+
+      capabilityReadingModal.addEventListener("click", (event) => {
+        if (
+          event.target.closest("[data-capability-modal-close]") ||
+          !event.target.closest(".reading-modal-dialog")
+        ) {
+          closeCapabilityModal();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !capabilityReadingModal.hidden) {
+          closeCapabilityModal();
+        }
+      });
+
+      renderTrackFilters();
+      renderFilters();
+      renderWorkbench();
+    </script>
+  </body>
+</html>

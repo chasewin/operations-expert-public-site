@@ -1,0 +1,10 @@
+{
+  "exportedAt": "2026-04-27T09:28:21.461Z",
+  "sourceDir": "demo/lite",
+  "outputDir": "dist/public-site",
+  "archive": "dist/public-site.zip",
+  "notes": [
+    "公开版已移除本地绝对路径和明显的内部文件定位字段。",
+    "页面内容来自导出时刻的静态数据快照，后续更新需要重新导出。"
+  ]
+}

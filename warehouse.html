@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>数据仓库</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="app-sidebar">
+        <div class="sidebar-topbar">
+          <div class="sidebar-brand">
+            <div class="brand-mark">OE</div>
+            <div class="brand-copy">
+              <p class="eyebrow sidebar-eyebrow">Operations Expert</p>
+              <h1>智能活动系统</h1>
+            </div>
+          </div>
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="切换侧边栏">⇤</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <a class="sidebar-nav-item" href="./index.html" title="主页">
+            <span class="nav-label-full">主页</span>
+            <span class="nav-label-short">主</span>
+          </a>
+          <a class="sidebar-nav-item" href="./system.html" title="系统说明">
+            <span class="nav-label-full">系统说明</span>
+            <span class="nav-label-short">系</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./protocol.html" title="工作协议台">
+            <span class="nav-label-full">工作协议台</span>
+            <span class="nav-label-short">协</span>
+          </a>
+          <a class="sidebar-nav-item active" href="./warehouse.html?category=activity" title="数据仓库">
+            <span class="nav-label-full">数据仓库</span>
+            <span class="nav-label-short">库</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./graph.html" title="关系图谱">
+            <span class="nav-label-full">关系图谱</span>
+            <span class="nav-label-short">图</span>
+          </a>
+          <a class="sidebar-nav-item" href="./growth.html" title="AI成长记录">
+            <span class="nav-label-full">AI成长记录</span>
+            <span class="nav-label-short">长</span>
+          </a>
+          <a class="sidebar-nav-item" href="./capabilities.html" title="专家能力 Wiki">
+            <span class="nav-label-full">专家能力 Wiki</span>
+            <span class="nav-label-short">能</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="app-main">
+        <div class="shell warehouse-shell">
+          <div class="page-titlebar">
+            <div>
+              <p class="eyebrow">Knowledge Assets</p>
+              <h1>数据仓库</h1>
+            </div>
+          </div>
+
+          <section class="warehouse-stage">
+            <div class="warehouse-tabs-row">
+              <div class="warehouse-tabs" id="category-list"></div>
+              <a id="graph-entry-link" class="ghost-link graph-entry-link" href="./graph.html">关系图谱</a>
+            </div>
+
+            <div class="content-panel warehouse-panel">
+              <div class="list-controls">
+                <div id="site-list" class="filter-list horizontal"></div>
+              </div>
+
+              <div id="cards-grid" class="cards-grid"></div>
+              <div id="empty-state" class="empty" hidden>当前筛选条件下没有卡片。</div>
+            </div>
+
+            <div id="category-perspective" class="page-footnote warehouse-footnote"></div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="./cards-data.js"></script>
+    <script>
+      const appShell = document.getElementById("app-shell");
+      const sidebarToggle = document.getElementById("sidebar-toggle");
+      const collapsed = localStorage.getItem("lite-sidebar-collapsed") === "true";
+
+      function applySidebarState(value) {
+        appShell.classList.toggle("sidebar-collapsed", value);
+        sidebarToggle.textContent = value ? "⇥" : "⇤";
+      }
+
+      applySidebarState(collapsed);
+      sidebarToggle.addEventListener("click", () => {
+        const next = !appShell.classList.contains("sidebar-collapsed");
+        localStorage.setItem("lite-sidebar-collapsed", String(next));
+        applySidebarState(next);
+      });
+
+      const params = new URLSearchParams(window.location.search);
+      const initialCategory = params.get("category");
+      const initialSite = params.get("site");
+      const state = {
+        category: initialCategory || "activity",
+        site: initialSite || "all",
+      };
+      const cards = window.CARD_DATA.cards;
+      const siteLabelMap = new Map((window.CARD_DATA.sites || []).map((site) => [site.id, site.label]));
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      // Activity cards must keep the site brand visually separated from the
+      // activity name. Future sites should inherit the same behavior by default:
+      // match both display labels and slug-derived brands, tolerate case/style
+      // differences like "okbet" -> "OKBet", and preserve the exact title
+      // prefix from the source title when rendering the brand marker.
+      function formatCardTitle(card) {
+        const title = String(card.title || "").trim();
+        if (card.category !== "activity") {
+          return escapeHtml(title);
+        }
+        const rawSiteLabel = siteLabelMap.get(card.site);
+        const candidates = [];
+        const pushCandidate = (value) => {
+          const next = String(value || "").trim();
+          if (!next || next === "全部站点" || candidates.includes(next)) return;
+          candidates.push(next);
+        };
+        const toTitleBrand = (value) =>
+          String(value || "")
+            .split(/[\s-]+/)
+            .filter(Boolean)
+            .map((part) => {
+              if (/^[a-z]{1,3}$/i.test(part)) return part.toUpperCase();
+              return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+            })
+            .join(" ");
+
+        pushCandidate(rawSiteLabel);
+        pushCandidate(toTitleBrand(rawSiteLabel));
+        pushCandidate(toTitleBrand(card.site));
+        pushCandidate(String(card.site || "").replace(/-/g, " "));
+
+        const lowerTitle = title.toLowerCase();
+        const matchedCandidate = candidates.find((candidate) =>
+          lowerTitle.startsWith(`${candidate.toLowerCase()} `)
+        );
+        if (!matchedCandidate) {
+          return escapeHtml(title);
+        }
+        const matchedBrand = title.slice(0, matchedCandidate.length).trim();
+        const activityTitle = title.slice(matchedCandidate.length).trim();
+        return `
+          <span class="card-title-brand">「${escapeHtml(matchedBrand)}」</span>
+          <span class="card-title-main">${escapeHtml(activityTitle)}</span>
+        `;
+      }
+
+      function renderCategories() {
+        const container = document.getElementById("category-list");
+        container.innerHTML = "";
+        window.CARD_DATA.categories.forEach((category) => {
+          const button = document.createElement("button");
+          button.className = "warehouse-tab" + (state.category === category.id ? " active" : "");
+          button.textContent = category.label;
+          button.onclick = () => {
+            state.category = category.id;
+            render();
+          };
+          container.appendChild(button);
+        });
+      }
+
+      function renderSites() {
+        const container = document.getElementById("site-list");
+        container.innerHTML = "";
+        window.CARD_DATA.sites.forEach((site) => {
+          const count =
+            site.id === "all"
+              ? cards.filter((card) => card.category === state.category).length
+              : cards.filter(
+                  (card) =>
+                    card.category === state.category &&
+                    (card.site === site.id || (Array.isArray(card.sites) && card.sites.includes(site.id)))
+                ).length;
+          const button = document.createElement("button");
+          button.className = "filter-btn" + (state.site === site.id ? " active" : "");
+          button.textContent = `${site.label} · ${count}`;
+          button.onclick = () => {
+            state.site = site.id;
+            render();
+          };
+          container.appendChild(button);
+        });
+      }
+
+      function matchesSite(card) {
+        if (state.site === "all") return true;
+        if (card.site === state.site) return true;
+        if (Array.isArray(card.sites) && card.sites.includes(state.site)) return true;
+        return false;
+      }
+
+      function getFilteredCards() {
+        return cards.filter((card) => card.category === state.category && matchesSite(card));
+      }
+
+      function renderCards() {
+        const grid = document.getElementById("cards-grid");
+        const empty = document.getElementById("empty-state");
+        const filtered = getFilteredCards();
+        grid.innerHTML = "";
+        grid.dataset.layout = state.category;
+
+        if (!filtered.length) {
+          empty.hidden = false;
+          return;
+        }
+        empty.hidden = true;
+
+        const columnCount = 3;
+        const columns = Array.from({ length: columnCount }, () => document.createElement("div"));
+        const columnHeights = Array.from({ length: columnCount }, () => 0);
+        columns.forEach((column) => {
+          column.className = "cards-column";
+          grid.appendChild(column);
+        });
+
+        filtered.forEach((card) => {
+          const updatedDate = card.updatedDate || "未知";
+          const link = document.createElement("a");
+          link.className = "card-item";
+          link.dataset.cardId = card.id;
+          link.href = `./detail.html?category=${encodeURIComponent(card.category)}&site=${encodeURIComponent(state.site)}&id=${encodeURIComponent(card.id)}`;
+          link.innerHTML = `
+            <div class="card-topline">
+              <div class="card-heading">
+                <h3>${formatCardTitle(card)}</h3>
+                <p class="muted">${escapeHtml(card.subtitle)}</p>
+              </div>
+              <span class="site-badge">${escapeHtml(card.site === "all" ? "跨站点" : card.site)}</span>
+            </div>
+            <div class="card-summary">${escapeHtml(card.summary)}</div>
+            <div class="card-meta-row">
+              <span class="card-meta-label">最后更新</span>
+              <span class="card-meta-value">${escapeHtml(updatedDate)}</span>
+            </div>
+          `;
+          const score = (card.summary?.length || 0) + (card.tags?.length || 0) * 18 + (card.title?.length || 0);
+          const targetIndex = columnHeights.indexOf(Math.min(...columnHeights));
+          columnHeights[targetIndex] += score;
+          columns[targetIndex].appendChild(link);
+        });
+      }
+
+      function renderPerspective() {
+        const container = document.getElementById("category-perspective");
+        const category = window.CARD_DATA.categories.find((item) => item.id === state.category);
+        container.innerHTML = `
+          <div class="perspective-inline">
+            <span class="perspective-label">分析视角</span>
+            <span class="perspective-copy">${category?.perspective || ""}</span>
+          </div>
+        `;
+      }
+
+      function render() {
+        renderCategories();
+        renderSites();
+        renderCards();
+        renderPerspective();
+        document.getElementById("graph-entry-link").href = `./graph.html?category=${encodeURIComponent(
+          state.category
+        )}&site=${encodeURIComponent(state.site)}&returnTo=${encodeURIComponent(`./warehouse.html?category=${state.category}&site=${state.site}`)}`;
+        const nextParams = new URLSearchParams({
+          category: state.category,
+          site: state.site,
+        });
+        window.history.replaceState({}, "", `./warehouse.html?${nextParams.toString()}`);
+      }
+
+      render();
+    </script>
+  </body>
+</html>

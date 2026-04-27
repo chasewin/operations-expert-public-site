@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>工作协议台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="app-sidebar">
+        <div class="sidebar-topbar">
+          <div class="sidebar-brand">
+            <div class="brand-mark">OE</div>
+            <div class="brand-copy">
+              <p class="eyebrow sidebar-eyebrow">Operations Expert</p>
+              <h1>智能活动系统</h1>
+            </div>
+          </div>
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="切换侧边栏">⇤</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <a class="sidebar-nav-item" href="./index.html" title="主页">
+            <span class="nav-label-full">主页</span>
+            <span class="nav-label-short">主</span>
+          </a>
+          <a class="sidebar-nav-item active" href="./system.html" title="系统说明">
+            <span class="nav-label-full">系统说明</span>
+            <span class="nav-label-short">系</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem active" href="./protocol.html" title="工作协议台">
+            <span class="nav-label-full">工作协议台</span>
+            <span class="nav-label-short">协</span>
+          </a>
+          <a class="sidebar-nav-item" href="./warehouse.html?category=activity" title="数据仓库">
+            <span class="nav-label-full">数据仓库</span>
+            <span class="nav-label-short">库</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./graph.html" title="关系图谱">
+            <span class="nav-label-full">关系图谱</span>
+            <span class="nav-label-short">图</span>
+          </a>
+          <a class="sidebar-nav-item" href="./growth.html" title="AI成长记录">
+            <span class="nav-label-full">AI成长记录</span>
+            <span class="nav-label-short">长</span>
+          </a>
+          <a class="sidebar-nav-item" href="./capabilities.html" title="专家能力 Wiki">
+            <span class="nav-label-full">专家能力 Wiki</span>
+            <span class="nav-label-short">能</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="app-main">
+        <div class="shell protocol-shell-v2">
+          <div class="page-titlebar">
+            <div>
+              <p class="eyebrow">Workflow Protocols</p>
+              <h1>工作协议台</h1>
+              <p id="protocol-status-line" class="muted protocol-status-line"></p>
+            </div>
+            <div class="titlebar-actions">
+              <span id="protocol-generated-at" class="muted tiny"></span>
+            </div>
+          </div>
+
+          <section class="protocol-console">
+            <aside class="protocol-side-panel">
+              <div class="panel-label">协议地图</div>
+              <div id="protocol-item-list" class="protocol-item-list"></div>
+            </aside>
+
+            <section class="protocol-detail-panel-v2">
+              <div id="protocol-detail-empty" class="empty" hidden>当前没有可展示的对象。</div>
+              <div id="protocol-detail"></div>
+            </section>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="./protocol-data.js"></script>
+    <script>
+      const appShell = document.getElementById("app-shell");
+      const sidebarToggle = document.getElementById("sidebar-toggle");
+      const collapsed = localStorage.getItem("lite-sidebar-collapsed") === "true";
+
+      function applySidebarState(value) {
+        appShell.classList.toggle("sidebar-collapsed", value);
+        sidebarToggle.textContent = value ? "⇥" : "⇤";
+      }
+
+      applySidebarState(collapsed);
+      sidebarToggle.addEventListener("click", () => {
+        const next = !appShell.classList.contains("sidebar-collapsed");
+        localStorage.setItem("lite-sidebar-collapsed", String(next));
+        applySidebarState(next);
+      });
+
+      const protocolData = window.PROTOCOL_DATA || {};
+      const state = {
+        itemId: protocolData.mapItems?.[0]?.id || null,
+      };
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function formatDateTime(value) {
+        if (!value) return "未记录";
+        return value.replace("T", " ").replace(/\.\d+Z$/, "Z");
+      }
+
+      function getItems() {
+        return protocolData.mapItems || [];
+      }
+
+      function getCurrentItem() {
+        const items = getItems();
+        return items.find((item) => item.id === state.itemId) || items[0] || null;
+      }
+
+      function ensureSelection() {
+        const items = getItems();
+        if (!items.length) {
+          state.itemId = null;
+          return;
+        }
+        if (!items.some((item) => item.id === state.itemId)) {
+          state.itemId = items[0].id;
+        }
+      }
+
+      function renderTop() {
+        document.getElementById("protocol-generated-at").textContent = `数据更新：${formatDateTime(protocolData.generatedAt)}`;
+        document.getElementById("protocol-status-line").textContent = protocolData.statusLine || "";
+      }
+
+      function renderItemList() {
+        const items = getItems();
+        const container = document.getElementById("protocol-item-list");
+
+        if (!items.length) {
+          container.innerHTML = '<div class="empty">当前没有对象。</div>';
+          return;
+        }
+
+        container.innerHTML = items
+          .map(
+            (item) => `
+              <button class="protocol-item-card${item.id === state.itemId ? " active" : ""}" data-item-id="${escapeHtml(item.id)}">
+                <span>${escapeHtml(item.title)}</span>
+              </button>
+            `
+          )
+          .join("");
+
+        container.querySelectorAll("[data-item-id]").forEach((node) => {
+          node.addEventListener("click", () => {
+            state.itemId = node.getAttribute("data-item-id");
+            renderItemList();
+            renderDetail();
+          });
+        });
+      }
+
+      function renderPathList(items) {
+        if (!items || !items.length) return '<div class="empty">无</div>';
+        return `
+          <div class="protocol-path-list">
+            ${items.map((item) => `<div class="protocol-path-row">${escapeHtml(item)}</div>`).join("")}
+          </div>
+        `;
+      }
+
+      function renderScriptList(items, stepStatuses) {
+        if (!items || !items.length) return '<div class="empty">无</div>';
+        const statusMap = new Map((stepStatuses || []).map((item) => [item.script, item.status]));
+        return `
+          <div class="protocol-script-list">
+            ${items
+              .map(
+                (item, index) => `
+                  <div class="protocol-script-row">
+                    <span class="protocol-script-index">${String(index + 1).padStart(2, "0")}</span>
+                    <div class="protocol-script-copy">
+                      <strong>${escapeHtml(item)}</strong>
+                      ${statusMap.has(item) ? `<span class="muted tiny">${escapeHtml(statusMap.get(item))}</span>` : ""}
+                    </div>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderDetail() {
+        ensureSelection();
+        const item = getCurrentItem();
+        const detail = document.getElementById("protocol-detail");
+        const empty = document.getElementById("protocol-detail-empty");
+
+        if (!item) {
+          empty.hidden = false;
+          detail.innerHTML = "";
+          return;
+        }
+
+        empty.hidden = true;
+
+        detail.innerHTML = `
+          <article class="protocol-detail-doc">
+            <header class="protocol-detail-head">
+              <div>
+                <h2>${escapeHtml(item.title)}</h2>
+                <p class="protocol-detail-summary">${escapeHtml(item.summary || "未补充说明")}</p>
+              </div>
+            </header>
+
+            <section class="protocol-detail-block">
+              <h3>触发方式</h3>
+              <p>${escapeHtml(item.triggerSource || "未补充说明")}</p>
+            </section>
+
+            <section class="protocol-detail-block">
+              <h3>执行顺序</h3>
+              ${renderScriptList(item.scripts || [], item.steps || [])}
+            </section>
+
+            <section class="protocol-detail-block">
+              <h3>读入对象</h3>
+              ${renderPathList(item.reads || [])}
+            </section>
+
+            <section class="protocol-detail-block">
+              <h3>写回对象</h3>
+              ${renderPathList(item.writes || [])}
+            </section>
+          </article>
+        `;
+      }
+
+      renderTop();
+      ensureSelection();
+      renderItemList();
+      renderDetail();
+    </script>
+  </body>
+</html>

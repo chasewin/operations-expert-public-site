@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>智能活动系统</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="app-sidebar">
+        <div class="sidebar-topbar">
+          <div class="sidebar-brand">
+            <div class="brand-mark">OE</div>
+            <div class="brand-copy">
+              <p class="eyebrow sidebar-eyebrow">Operations Expert</p>
+              <h1>智能活动系统</h1>
+            </div>
+          </div>
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="切换侧边栏">⇤</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <a class="sidebar-nav-item active" href="./index.html" title="主页">
+            <span class="nav-label-full">主页</span>
+            <span class="nav-label-short">主</span>
+          </a>
+          <a class="sidebar-nav-item" href="./system.html" title="系统说明">
+            <span class="nav-label-full">系统说明</span>
+            <span class="nav-label-short">系</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./protocol.html" title="工作协议台">
+            <span class="nav-label-full">工作协议台</span>
+            <span class="nav-label-short">协</span>
+          </a>
+          <a class="sidebar-nav-item" href="./warehouse.html?category=activity" title="数据仓库">
+            <span class="nav-label-full">数据仓库</span>
+            <span class="nav-label-short">库</span>
+          </a>
+          <a class="sidebar-nav-item sidebar-nav-subitem" href="./graph.html" title="关系图谱">
+            <span class="nav-label-full">关系图谱</span>
+            <span class="nav-label-short">图</span>
+          </a>
+          <a class="sidebar-nav-item" href="./growth.html" title="AI成长记录">
+            <span class="nav-label-full">AI成长记录</span>
+            <span class="nav-label-short">长</span>
+          </a>
+          <a class="sidebar-nav-item" href="./capabilities.html" title="专家能力 Wiki">
+            <span class="nav-label-full">专家能力 Wiki</span>
+            <span class="nav-label-short">能</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="app-main">
+        <div class="home-stage">
+          <section class="home-hero">
+            <p class="eyebrow">Conversation Entry</p>
+            <h2>你好，欢迎回来</h2>
+            <div class="home-copy-group">
+              <p class="muted home-intro">
+                我是你的智能活动专家，可以和你一起做竞品活动分析、活动策划梳理，并持续沉淀专家成长。
+              </p>
+              <p class="muted home-subintro">
+                你可以从这里发起一次活动分析、进入活动策划协作，或查看最近已经确认生效的专家成长结果。
+              </p>
+            </div>
+          </section>
+
+          <section class="home-chat-panel">
+            <div class="fake-chat-box">
+              <div class="fake-chat-placeholder">今天我们先一起处理什么？</div>
+              <textarea id="prompt-box" class="prompt-box" placeholder="例如：帮我分析一下这个活动为什么有效，重点看它解决了什么业务问题。"></textarea>
+              <div class="prompt-footer">
+                <span class="muted tiny">当前是 demo，功能待完善。</span>
+                <button id="send-preview" class="primary-pill" type="button">预览指令</button>
+              </div>
+            </div>
+
+            <div class="quick-actions">
+              <button class="quick-action" data-prompt="开始活动分析：请先告诉我活动资料、页面规则、相关截图或你已有的初步判断，我会先帮你拆出业务问题、方法和是否值得借鉴。">开始活动分析</button>
+              <button class="quick-action" data-prompt="开始活动策划：请先告诉我活动目标、目标用户、预算范围、想解决的业务问题和你已有的想法，我会陪你一起把方案拆清楚。">开始活动策划</button>
+              <button class="quick-action" data-prompt="查看专家成长：我想先看最近已经确认生效的成长结果，重点关注最近的成长时间、来源案例和影响范围。">查看专家成长</button>
+              <a class="quick-action link-action" href="./system.html">系统说明中心</a>
+              <a class="quick-action link-action" href="./capabilities.html">查看专家能力 Wiki</a>
+              <a class="quick-action link-action" href="./protocol.html">查看工作协议台</a>
+              <a class="quick-action link-action" href="./warehouse.html?category=activity">进入数据仓库</a>
+            </div>
+
+            <div id="prompt-preview" class="prompt-preview" hidden></div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const promptBox = document.getElementById("prompt-box");
+      const preview = document.getElementById("prompt-preview");
+      const sendPreview = document.getElementById("send-preview");
+      const appShell = document.getElementById("app-shell");
+      const sidebarToggle = document.getElementById("sidebar-toggle");
+      const collapsed = localStorage.getItem("lite-sidebar-collapsed") === "true";
+
+      function applySidebarState(value) {
+        appShell.classList.toggle("sidebar-collapsed", value);
+        sidebarToggle.textContent = value ? "⇥" : "⇤";
+      }
+
+      applySidebarState(collapsed);
+      sidebarToggle.addEventListener("click", () => {
+        const next = !appShell.classList.contains("sidebar-collapsed");
+        localStorage.setItem("lite-sidebar-collapsed", String(next));
+        applySidebarState(next);
+      });
+
+      document.querySelectorAll(".quick-action[data-prompt]").forEach((button) => {
+        button.addEventListener("click", () => {
+          promptBox.value = button.dataset.prompt || "";
+          preview.hidden = true;
+        });
+      });
+
+      sendPreview.addEventListener("click", () => {
+        const value = promptBox.value.trim();
+        preview.hidden = false;
+        preview.innerHTML = value
+          ? `<div class="panel-label">当前预置指令</div><p>${value}</p>`
+          : '<div class="panel-label">当前预置指令</div><p class="muted">你还没有填写内容，可以先点击下方快捷入口。</p>';
+      });
+    </script>
+  </body>
+</html>
